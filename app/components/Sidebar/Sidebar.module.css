@@ -1,0 +1,39 @@
+.sidebar {
+  /* background: white;
+  border: 1px solid #e5e7eb;  */
+  padding: 25px;
+  /* height: 100vh; 
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;  */
+}
+
+/* Individual link classes */
+.dashboard,
+.pointOfSale,
+.products,
+.orders,
+.analytics,
+.setting,
+.customers {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px;
+  height: 48px;
+  width: 223px;
+  border-radius: 10px;
+  transition: background-color 0.3s;
+}
+
+.active {
+  background-color: #f99042;
+}
+
+.activeText {
+  color: white !important;
+}
+
+.sidebar img {
+  transition: 0.3s;
+}

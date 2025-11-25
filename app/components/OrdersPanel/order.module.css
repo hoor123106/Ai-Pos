@@ -1,0 +1,97 @@
+.wrapper {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-top: 70px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #eee;
+}
+
+.heading {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.table {
+  width: 100%;
+}
+
+.rowHeader {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 10px 0;
+  border-top: 1px solid #f1f1f1;
+  font-size: 14px;
+}
+
+.status {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  width: fit-content;
+}
+
+.completed {
+  background: #e8fff1;
+  color: #28a745;
+}
+
+.pending {
+  background: #fff6e5;
+  color: #f4a100;
+}
+
+.processing {
+  background: #e7f0ff;
+  color: #3b82f6;
+}
+
+.time {
+  color: #888;
+  font-size: 12px;
+}
+
+/* Right Panel */
+
+.products {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.productRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid #f1f1f1;
+}
+
+.productName {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sold {
+  font-size: 12px;
+  color: #888;
+}
+
+.price {
+  font-weight: 600;
+}

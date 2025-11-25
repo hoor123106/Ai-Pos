@@ -1,0 +1,66 @@
+.dashboardCard {
+  background: #e3e3e3;
+  border-radius: 16px;
+  padding: 18px 20px;
+  border: 1px solid #f1f1f1;
+}
+
+.dashboardcardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dashboardCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.iconBox {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #f5f6fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconImage {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.percent {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.title {
+  margin-top: 14px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+}
+/* Responsive like dashboard */
+@media (max-width: 1024px) {
+  .dashboardCardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboardCardsGrid {
+    grid-template-columns: 1fr;
+  }
+}
