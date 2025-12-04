@@ -1,7 +1,5 @@
 "use client";
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+
 import DashboardCards from "@/app/components/DashboardCards/DashbaordCards";
 import SalesChart from "@/app/components/SalesChart/SalesChart";
 import OrdersChart from "@/app/components/OrdersChart/OrdersChart";
@@ -10,18 +8,8 @@ import styles from "./dashboard.module.css";
 
 
 export default function Dashboard() {
-  const { isSignedIn } = useUser();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (!isSignedIn) {
-      router.push("/sign-in"); // redirect logged-out user
-    }
-  }, [isSignedIn]);
-
-  if (!isSignedIn) return null; // don’t render until user is signed in
-
-  return (
+return (
     <div className={styles.dashboardContainer}>
       {/* Dashboard Header */}
       <div className={styles.dashboardHeader}>

@@ -1,13 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { supabase } from "@/app/utils/supabase/client";
+import {supabase} from "../../../app/utils/supabase/client"
 import { useRouter } from "next/navigation";
 
 export function useSupabaseAuth() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
