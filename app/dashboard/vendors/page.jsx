@@ -12,8 +12,12 @@ export default function Vendors() {
   const [rates, setRates] = useState({ USD: 1, PKR: 280, AED: 3.67 });
 
   const [form, setForm] = useState({
+<<<<<<< HEAD
     date: null, 
     vendor_name: "", 
+=======
+    date: "",
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
     invoice_no: "", 
     description: "",
     debit: 0,
@@ -38,6 +42,10 @@ export default function Vendors() {
     }
   };
 
+<<<<<<< HEAD
+=======
+  // --- DELETE FUNCTION ---
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
   const deleteVendor = async (id) => {
     if (confirm("Are you sure you want to delete this vendor record?")) {
       try {
@@ -47,6 +55,11 @@ export default function Vendors() {
           .eq("id", id);
 
         if (error) throw error;
+<<<<<<< HEAD
+=======
+        
+        // State update taake page refresh na karna paray
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
         setRows(rows.filter(row => row.id !== id));
       } catch (error) {
         alert("Delete failed: " + error.message);
@@ -63,6 +76,7 @@ export default function Vendors() {
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
+<<<<<<< HEAD
     
     let finalValue = value;
     if (type === "number") finalValue = parseFloat(value) || 0;
@@ -74,17 +88,25 @@ export default function Vendors() {
     setForm({ 
       ...form, 
       [name]: finalValue 
+=======
+    setForm({ 
+      ...form, 
+      [name]: type === "number" ? parseFloat(value) || 0 : value 
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
     });
   };
 
   const saveVendor = async (e) => {
     e.preventDefault();
+<<<<<<< HEAD
 
     if (form.debit === 0 && form.credit === 0) {
       alert("Error: Please enter either a Debit (Paid) or a Credit (Owed) amount.");
       return; 
     }
 
+=======
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
     try {
       const { error } = await supabase
         .from("vendor_records")
@@ -94,8 +116,12 @@ export default function Vendors() {
 
       setShowForm(false);
       fetchVendors();
+<<<<<<< HEAD
       setForm({ date: null, vendor_name: "", invoice_no: "", description: "", debit: 0, credit: 0, balance: 0 });
       
+=======
+      setForm({ date: "", invoice_no: "", description: "", debit: 0, credit: 0, balance: 0 });
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
     } catch (error) {
       alert("Error saving: " + error.message);
     }
@@ -145,11 +171,18 @@ export default function Vendors() {
         <div style={{ padding: "20px 24px", borderBottom: "1px solid #f3f4f6" }}>
           <h2 style={{ fontSize: "16px", fontWeight: "600", color: "#111" }}>Vendor Records</h2>
         </div>
+<<<<<<< HEAD
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1200px" }}>
           <thead style={{ backgroundColor: "#fafafa", borderBottom: "1px solid #f3f4f6" }}>
             <tr style={{ fontSize: "12px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Date</th>
               <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Vendor Name</th>
+=======
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1000px" }}>
+          <thead style={{ backgroundColor: "#fafafa", borderBottom: "1px solid #f3f4f6" }}>
+            <tr style={{ fontSize: "12px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Date</th>
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
               <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Invoice No</th>
               <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Description</th>
               <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Debit ({currency})</th>
@@ -160,6 +193,7 @@ export default function Vendors() {
           </thead>
           <tbody style={{ fontSize: "14px", color: "#374151" }}>
             {loading ? (
+<<<<<<< HEAD
               <tr><td colSpan="8" style={{ padding: "40px", textAlign: "center" }}>Loading records...</td></tr>
             ) : rows.length === 0 ? (
               <tr><td colSpan="8" style={{ padding: "60px", textAlign: "center", color: "#9ca3af" }}>No vendor records found.</td></tr>
@@ -170,11 +204,30 @@ export default function Vendors() {
                   <td style={{ padding: "15px 20px", fontWeight: "600" }}>{row.vendor_name || "___"}</td>
                   <td style={{ padding: "15px 20px" }}>{row.invoice_no || "___"}</td>
                   <td style={{ padding: "15px 20px" }}>{row.description || "___"}</td>
+=======
+              <tr><td colSpan="7" style={{ padding: "40px", textAlign: "center" }}>Loading records...</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan="7" style={{ padding: "60px", textAlign: "center", color: "#9ca3af" }}>No vendor records found.</td></tr>
+            ) : (
+              rows.map((row) => (
+                <tr key={row.id} style={{ borderBottom: "1px solid #f3f4f6", textAlign: "center" }}>
+                  <td style={{ padding: "15px 20px" }}>{row.date}</td>
+                  <td style={{ padding: "15px 20px", fontWeight: "500" }}>{row.invoice_no}</td>
+                  <td style={{ padding: "15px 20px" }}>{row.description}</td>
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
                   <td style={{ padding: "15px 20px", color: "#0ca678", fontWeight: "500" }}>{getSymbol()}{convert(row.debit)}</td>
                   <td style={{ padding: "15px 20px", color: "#e03131", fontWeight: "500" }}>{getSymbol()}{convert(row.credit)}</td>
                   <td style={{ padding: "15px 20px", fontWeight: "bold", color: "#000" }}>{getSymbol()}{convert(row.balance)}</td>
                   <td style={{ padding: "15px 20px" }}>
+<<<<<<< HEAD
                     <button onClick={() => deleteVendor(row.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#ff4d4f" }}>
+=======
+                    <button 
+                      onClick={() => deleteVendor(row.id)}
+                      style={{ border: "none", background: "none", cursor: "pointer", color: "#ff4d4f" }}
+                      title="Delete Record"
+                    >
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                     </button>
                   </td>
@@ -196,6 +249,7 @@ export default function Vendors() {
             </div>
 
             <form onSubmit={saveVendor} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+<<<<<<< HEAD
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Date</label>
                 <input name="date" type="date" onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
@@ -207,6 +261,16 @@ export default function Vendors() {
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Invoice No</label>
                 <input name="invoice_no" type="text" onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
+=======
+              {/* Form Fields */}
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Date</label>
+                <input name="date" type="date" required onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Invoice No</label>
+                <input name="invoice_no" type="text" required onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
+>>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
               </div>
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Description</label>
