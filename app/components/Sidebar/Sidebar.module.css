@@ -1,0 +1,38 @@
+.sidebar {
+  padding: 20px 25px;      
+  margin-top: 70px;       
+  background: #fff;        
+  height: calc(100vh - 70px); 
+  box-sizing: border-box;
+  overflow-y: auto;      
+}
+
+
+.dashboard,
+.pointOfSale,
+.products,
+.orders,
+.analytics,
+.setting,
+.customers {
+  display: flex;
+  align-items: center;
+  gap: 8px;               
+  margin-top: 12px;       
+  padding: 8px 10px;      
+  border-radius: 10px;
+  transition: background-color 0.3s;
+  width: 100%;         
+}
+
+.active {
+  background-color: #f99042;
+}
+
+.activeText {
+  color: white !important;
+}
+
+.sidebar img {
+  transition: 0.3s;
+}

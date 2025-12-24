@@ -1,0 +1,76 @@
+body {
+  padding-top: 70px; /* header ki approx height */
+}
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+  border-bottom: 1px solid #e1e1e1;
+  z-index: 1000;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoBox {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.appName {
+  font-weight: 600;
+  font-size: 18px;
+  font-family: 'Arial', sans-serif;
+  color: #212121;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.sign-in
+Btn {
+  background-color: #f37e0a;
+  color: white;
+  border: none;
+  padding: 7px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-family: 'Arial', sans-serif;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.sign-in
+Btn:hover {
+  background-color: #d36d08;
+}
+/* Add this in globals.css */
+body.clerk-modal-open {
+  overflow: hidden !important;
+  height: 100vh !important;
+}

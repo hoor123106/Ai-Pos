@@ -1,0 +1,58 @@
+.dashboardHeading {
+  font-size: 34px;
+  font-weight: bold;
+}
+
+.dashboardContainer {
+  flex-grow: 1;
+}
+
+.sidebarContainer {
+  width: auto;
+}
+
+.dashboardHeader {
+  margin-bottom: 50px;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.chartHeading {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  margin-top: 0;
+  color: #333;
+}
+
+
+.chartCard {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  /* REMOVE padding */
+  height: 300px;
+  /* Fixed height for chart */
+  width: 100%;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chartCard:first-child {
+  padding-bottom: 20px;
+}
+
+.chartWrapper {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
