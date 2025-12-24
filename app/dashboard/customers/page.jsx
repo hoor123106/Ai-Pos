@@ -12,7 +12,6 @@ export default function Customers() {
   const [rates, setRates] = useState({ USD: 1, PKR: 280, AED: 3.67 });
 
   const [form, setForm] = useState({
-<<<<<<< HEAD
     date: null, 
     account_name: "", 
     description: "", 
@@ -21,10 +20,6 @@ export default function Customers() {
     debit: 0, 
     credit: 0, 
     balance: 0,
-=======
-    date: "", account_name: "", description: "", qty: 0,
-    reference: "", debit: 0, credit: 0, balance: 0,
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
   });
 
   const fetchCustomers = async () => {
@@ -44,10 +39,6 @@ export default function Customers() {
     }
   };
 
-<<<<<<< HEAD
-=======
-  // --- DELETE FUNCTION ---
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
   const deleteCustomer = async (id) => {
     if (confirm("Are you sure you want to delete this record?")) {
       try {
@@ -57,11 +48,6 @@ export default function Customers() {
           .eq("id", id);
 
         if (error) throw error;
-<<<<<<< HEAD
-=======
-        
-        // List update karo bina page refresh kiye
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
         setRows(rows.filter(row => row.id !== id));
       } catch (error) {
         alert("Delete failed: " + error.message);
@@ -91,7 +77,6 @@ export default function Customers() {
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-<<<<<<< HEAD
     
     let finalValue = value;
     if (type === "number") finalValue = parseFloat(value) || 0;
@@ -104,17 +89,11 @@ export default function Customers() {
     setForm({ 
       ...form, 
       [name]: finalValue 
-=======
-    setForm({ 
-      ...form, 
-      [name]: type === "number" ? parseFloat(value) || 0 : value 
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
     });
   };
 
   const saveCustomer = async (e) => {
     e.preventDefault();
-<<<<<<< HEAD
 
     // --- MAIN LOGIC ---
     // Entry sirf tab rukegi agar Debit aur Credit dono 0 hon
@@ -132,14 +111,6 @@ export default function Customers() {
       fetchCustomers();
       // Form reset
       setForm({ date: null, account_name: "", description: "", qty: 0, reference: "", debit: 0, credit: 0, balance: 0 });
-=======
-    try {
-      const { error } = await supabase.from("customer_records").insert([form]);
-      if (error) throw error;
-      setShowForm(false);
-      fetchCustomers();
-      setForm({ date: "", account_name: "", description: "", qty: 0, reference: "", debit: 0, credit: 0, balance: 0 });
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
     } catch (error) {
       alert("Error saving: " + error.message);
     }
@@ -198,32 +169,16 @@ export default function Customers() {
             ) : (
               rows.map((row) => (
                 <tr key={row.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-<<<<<<< HEAD
                   <td style={{ padding: "15px 20px" }}>{row.date || "___"}</td>
                   <td style={{ padding: "15px 20px", fontWeight: "500" }}>{row.account_name || "___"}</td>
                   <td style={{ padding: "15px 20px" }}>{row.description || "___"}</td>
                   <td style={{ padding: "15px 20px", textAlign: "center" }}>{row.qty || "0"}</td>
                   <td style={{ padding: "15px 20px", textAlign: "center" }}>{row.reference || "___"}</td>
-=======
-                  <td style={{ padding: "15px 20px" }}>{row.date}</td>
-                  <td style={{ padding: "15px 20px", fontWeight: "500" }}>{row.account_name}</td>
-                  <td style={{ padding: "15px 20px" }}>{row.description}</td>
-                  <td style={{ padding: "15px 20px", textAlign: "center" }}>{row.qty}</td>
-                  <td style={{ padding: "15px 20px", textAlign: "center" }}>{row.reference}</td>
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
                   <td style={{ padding: "15px 20px", textAlign: "right", color: "#0ca678" }}>{getSymbol()}{convert(row.debit)}</td>
                   <td style={{ padding: "15px 20px", textAlign: "right", color: "#e03131" }}>{getSymbol()}{convert(row.credit)}</td>
                   <td style={{ padding: "15px 20px", textAlign: "right", fontWeight: "bold" }}>{getSymbol()}{convert(row.balance)}</td>
                   <td style={{ padding: "15px 20px", textAlign: "center" }}>
-<<<<<<< HEAD
                     <button onClick={() => deleteCustomer(row.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#ff4d4f", padding: "5px" }}>
-=======
-                    <button 
-                      onClick={() => deleteCustomer(row.id)}
-                      style={{ border: "none", background: "none", cursor: "pointer", color: "#ff4d4f", padding: "5px" }}
-                      title="Delete Record"
-                    >
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                     </button>
                   </td>
@@ -234,11 +189,7 @@ export default function Customers() {
         </table>
       </div>
 
-<<<<<<< HEAD
       {/* Side Drawer Form */}
-=======
-      {/* Side Drawer Form (Keep your existing form code here) */}
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
       {showForm && (
         <>
           <div onClick={() => setShowForm(false)} style={{ position: "fixed", top: "64px", left: 0, width: "100%", height: "calc(100% - 64px)", backgroundColor: "rgba(0,0,0,0.15)", zIndex: 998 }} />
@@ -248,7 +199,6 @@ export default function Customers() {
               <button onClick={() => setShowForm(false)} style={{ border: "none", background: "none", fontSize: "22px", cursor: "pointer", color: "#bbb" }}>✕</button>
             </div>
             <form onSubmit={saveCustomer} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-<<<<<<< HEAD
                {[
                 { label: "Date", name: "date", type: "date", required: false }, // required false taake blank save ho
                 { label: "Account Name", name: "account_name", type: "text", required: false },
@@ -267,22 +217,6 @@ export default function Customers() {
                     onChange={handleChange} 
                     style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", fontSize: "14px" }} 
                   />
-=======
-               {/* Same form fields as before... */}
-               {[
-                { label: "Date", name: "date", type: "date" },
-                { label: "Account Name", name: "account_name", type: "text" },
-                { label: "Description", name: "description", type: "text" },
-                { label: "QTY", name: "qty", type: "number" },
-                { label: "Reference No.", name: "reference", type: "text" },
-                { label: "Debit (USD)", name: "debit", type: "number" },
-                { label: "Credit (USD)", name: "credit", type: "number" },
-                { label: "Balance (USD)", name: "balance", type: "number" },
-              ].map((field) => (
-                <div key={field.name}>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>{field.label}</label>
-                  <input name={field.name} type={field.type} required onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", fontSize: "14px" }} />
->>>>>>> 25ea72f5e9edcbe4dc55208d05764e3879fcfd93
                 </div>
               ))}
               <div style={{ marginTop: "25px", display: "flex", gap: "12px" }}>
