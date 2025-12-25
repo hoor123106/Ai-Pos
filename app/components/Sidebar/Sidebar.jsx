@@ -23,7 +23,7 @@ export default function Sidebar() {
       activeIcon: "/images/point-of-saleWhite.png",
       cls: styles.pointOfSale,
     },
- 
+
 
     {
       name: "Customers",
@@ -32,14 +32,21 @@ export default function Sidebar() {
       activeIcon: "/images/communityWhite.png",
       cls: styles.customers,
     },
-      {
+    {
+      name: "Quick Notes",
+      href: "/dashboard/quicknotes",
+      icon: "/images/dashboardIconDark.png",
+      activeIcon: "/images/dashboard.png",
+      cls: styles.dashboard,
+    },
+    {
       name: "Settings",
       href: "/dashboard/setting-pos",
       icon: "/images/setting-icon.png",
       activeIcon: "/images/settingswhite.png",
       cls: styles.customers,
     },
- 
+
     // {
     //   name: "Inventory",
     //   href: "/dashboard/inventory",
