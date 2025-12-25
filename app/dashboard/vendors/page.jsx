@@ -1,24 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { supabase } from "../../utils/supabase/client"; 
 
 export default function Vendors() {
   const [showForm, setShowForm] = useState(false);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currency, setCurrency] = useState("USD");
-  const [rates, setRates] = useState({ USD: 1, PKR: 280, AED: 3.67 });
+  
+  const [exchangeRates, setExchangeRates] = useState({ USD: 1, PKR: 280, AED: 3.67 });
+  const [formCurrency, setFormCurrency] = useState("USD");
 
   const [form, setForm] = useState({
-    date: "",
-    invoice_no: "", 
-    description: "",
-    debit: 0,
-    credit: 0,
-    balance: 0,
+    date: "", invoice_no: "", description: "",
+    debit: 0, credit: 0, balance: 0,
   });
+
+  const currencySymbols = { USD: "$", PKR: "Rs", AED: "Dh" };
 
   const fetchVendors = async () => {
     setLoading(true);
@@ -27,7 +25,6 @@ export default function Vendors() {
         .from("vendor_records")
         .select("*")
         .order("created_at", { ascending: false });
-
       if (error) throw error;
       setRows(data || []);
     } catch (error) {
@@ -37,188 +34,195 @@ export default function Vendors() {
     }
   };
 
-  // --- DELETE FUNCTION ---
-  const deleteVendor = async (id) => {
-    if (confirm("Are you sure you want to delete this vendor record?")) {
-      try {
-        const { error } = await supabase
-          .from("vendor_records")
-          .delete()
-          .eq("id", id);
+  useEffect(() => { fetchVendors(); }, []);
 
-        if (error) throw error;
-        
-        // State update taake page refresh na karna paray
-        setRows(rows.filter(row => row.id !== id));
-      } catch (error) {
-        alert("Delete failed: " + error.message);
-      }
-    }
+  const formatValue = (val, rowCurrency) => {
+    const amount = val !== undefined && val !== null ? val : 0;
+    const activeCurrency = rowCurrency || "USD"; 
+    const symbol = currencySymbols[activeCurrency] || "";
+    return `${symbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
-
-  useEffect(() => {
-    fetchVendors();
-    axios.get("https://open.er-api.com/v6/latest/USD")
-      .then(res => setRates(res.data.rates))
-      .catch(err => console.log("Rates fetch error"));
-  }, []);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    setForm({ 
-      ...form, 
-      [name]: type === "number" ? parseFloat(value) || 0 : value 
+    const numValue = type === "number" ? (value === "" ? 0 : parseFloat(value)) : value;
+    
+    setForm((prev) => {
+        const updated = { ...prev, [name]: numValue };
+        if (name === "debit" || name === "credit") {
+            const d = name === "debit" ? numValue : (prev.debit || 0);
+            const c = name === "credit" ? numValue : (prev.credit || 0);
+            updated.balance = parseFloat((d - c).toFixed(2));
+        }
+        return updated;
     });
+  };
+
+  const handleManualRateChange = (newRate) => {
+    const rateVal = parseFloat(newRate) || 0;
+    if (formCurrency === "PKR" && rateVal > 0) {
+      const oldRate = exchangeRates.PKR;
+      const factor = rateVal / oldRate;
+      setForm((prev) => ({
+        ...prev,
+        debit: parseFloat(((prev.debit || 0) * factor).toFixed(2)),
+        credit: parseFloat(((prev.credit || 0) * factor).toFixed(2)),
+        balance: parseFloat(((prev.balance || 0) * factor).toFixed(2)),
+      }));
+    }
+    setExchangeRates(prev => ({ ...prev, PKR: rateVal }));
+  };
+
+  const handleCurrencyChange = (newCurr) => {
+    const oldCurr = formCurrency;
+    if (oldCurr === newCurr) return;
+    const factor = exchangeRates[newCurr] / exchangeRates[oldCurr];
+    setForm((prev) => ({
+      ...prev,
+      debit: parseFloat(((prev.debit || 0) * factor).toFixed(2)),
+      credit: parseFloat(((prev.credit || 0) * factor).toFixed(2)),
+      balance: parseFloat(((prev.balance || 0) * factor).toFixed(2)),
+    }));
+    setFormCurrency(newCurr);
   };
 
   const saveVendor = async (e) => {
     e.preventDefault();
     try {
-      const { error } = await supabase
-        .from("vendor_records")
-        .insert([form]);
-
+      const { error } = await supabase.from("vendor_records").insert([{ ...form, currency: formCurrency }]);
       if (error) throw error;
-
       setShowForm(false);
       fetchVendors();
       setForm({ date: "", invoice_no: "", description: "", debit: 0, credit: 0, balance: 0 });
+    } catch (error) { alert("Error: " + error.message); }
+  };
+
+  const deleteEntry = async (id) => {
+    if (!confirm("Are you sure?")) return;
+    try {
+      const { error } = await supabase.from("vendor_records").delete().eq("id", id);
+      if (error) throw error;
+      fetchVendors();
     } catch (error) {
-      alert("Error saving: " + error.message);
+      alert("Error: " + error.message);
     }
-  };
-
-  const convert = (val) => {
-    if (!val) return "0.00";
-    const converted = parseFloat(val) * rates[currency];
-    return converted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const getSymbol = () => {
-    if (currency === "PKR") return "Rs ";
-    if (currency === "USD") return "$ ";
-    if (currency === "AED") return "Dh ";
-    return "";
   };
 
   return (
     <div style={{ backgroundColor: "#f9fafb", minHeight: "100vh", padding: "40px", fontFamily: "sans-serif" }}>
-      
-      {/* Header */}
-      <div style={{ marginBottom: "25px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h1 style={{ fontSize: "28px", fontWeight: "bold", color: "#000", margin: "0" }}>Vendors</h1>
-          <p style={{ color: "#666", fontSize: "14px", marginTop: "4px" }}>Manage vendor invoices and payments history.</p>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#fff", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
-          <span style={{ fontSize: "12px", fontWeight: "bold" }}>Currency:</span>
-          <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ border: "none", outline: "none", cursor: "pointer", fontWeight: "600", fontSize: "14px" }}>
-            <option value="USD">USD ($)</option>
-            <option value="PKR">PKR (Rs)</option>
-            <option value="AED">AED</option>
-          </select>
-        </div>
+      <div style={{ marginBottom: "25px" }}>
+          <h1 style={{ fontSize: "28px", fontWeight: "bold", color: "#000" }}>Vendors</h1>
+          <p style={{ color: "#666", fontSize: "14px" }}>Manage vendor records with headings.</p>
       </div>
 
-      <div style={{ marginBottom: "20px" }}>
-        <button onClick={() => setShowForm(true)} style={{ backgroundColor: "#000", color: "#fff", padding: "10px 20px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "500", fontSize: "14px" }}>
-          + Add Vendor Invoice
-        </button>
-      </div>
+      <button onClick={() => setShowForm(true)} style={{ backgroundColor: "#000", color: "#fff", padding: "10px 20px", borderRadius: "8px", border: "none", cursor: "pointer", marginBottom: "20px" }}>
+        + Add Vendor
+      </button>
 
-      {/* Table Section */}
-      <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #e5e7eb", overflowX: "auto", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid #f3f4f6" }}>
-          <h2 style={{ fontSize: "16px", fontWeight: "600", color: "#111" }}>Vendor Records</h2>
-        </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1000px" }}>
+      <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #e5e7eb", overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ backgroundColor: "#fafafa", borderBottom: "1px solid #f3f4f6" }}>
-            <tr style={{ fontSize: "12px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Date</th>
-              <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Invoice No</th>
-              <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Description</th>
-              <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Debit ({currency})</th>
-              <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Credit ({currency})</th>
-              <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Balance ({currency})</th>
-              <th style={{ padding: "15px 20px", textAlign: "center", fontWeight: "600" }}>Action</th>
+            <tr style={{ fontSize: "12px", color: "#6b7280", textTransform: "uppercase" }}>
+              <th style={{ padding: "15px" }}>Date</th>
+              <th style={{ padding: "15px" }}>Invoice No</th>
+              <th style={{ padding: "15px" }}>Description</th>
+              <th style={{ padding: "15px" }}>Debit</th>
+              <th style={{ padding: "15px" }}>Credit</th>
+              <th style={{ padding: "15px" }}>Balance</th>
+              <th style={{ padding: "15px" }}>Action</th>
             </tr>
           </thead>
-          <tbody style={{ fontSize: "14px", color: "#374151" }}>
-            {loading ? (
-              <tr><td colSpan="7" style={{ padding: "40px", textAlign: "center" }}>Loading records...</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td colSpan="7" style={{ padding: "60px", textAlign: "center", color: "#9ca3af" }}>No vendor records found.</td></tr>
-            ) : (
-              rows.map((row) => (
-                <tr key={row.id} style={{ borderBottom: "1px solid #f3f4f6", textAlign: "center" }}>
-                  <td style={{ padding: "15px 20px" }}>{row.date}</td>
-                  <td style={{ padding: "15px 20px", fontWeight: "500" }}>{row.invoice_no}</td>
-                  <td style={{ padding: "15px 20px" }}>{row.description}</td>
-                  <td style={{ padding: "15px 20px", color: "#0ca678", fontWeight: "500" }}>{getSymbol()}{convert(row.debit)}</td>
-                  <td style={{ padding: "15px 20px", color: "#e03131", fontWeight: "500" }}>{getSymbol()}{convert(row.credit)}</td>
-                  <td style={{ padding: "15px 20px", fontWeight: "bold", color: "#000" }}>{getSymbol()}{convert(row.balance)}</td>
-                  <td style={{ padding: "15px 20px" }}>
-                    <button 
-                      onClick={() => deleteVendor(row.id)}
-                      style={{ border: "none", background: "none", cursor: "pointer", color: "#ff4d4f" }}
-                      title="Delete Record"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} style={{ borderBottom: "1px solid #f3f4f6", textAlign: "center" }}>
+                <td style={{ padding: "15px" }}>{row.date}</td>
+                <td style={{ padding: "15px" }}>{row.invoice_no || "—"}</td>
+                <td style={{ padding: "15px" }}>{row.description || "—"}</td>
+                <td style={{ padding: "15px", color: "#0ca678" }}>{formatValue(row.debit, row.currency)}</td>
+                <td style={{ padding: "15px", color: "#e03131" }}>{formatValue(row.credit, row.currency)}</td>
+                <td style={{ padding: "15px", fontWeight: "bold" }}>{formatValue(row.balance, row.currency)}</td>
+                <td style={{ padding: "15px" }}>
+                   {/* Icon added here */}
+                   <button onClick={() => deleteEntry(row.id)} style={{ color: "#ff4d4f", border: "none", background: "none", cursor: "pointer" }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                   </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* Side Popup */}
       {showForm && (
         <>
-          <div onClick={() => setShowForm(false)} style={{ position: "fixed", top: "64px", left: 0, width: "100%", height: "calc(100% - 64px)", backgroundColor: "rgba(0,0,0,0.15)", zIndex: 998 }} />
-          <div style={{ position: "fixed", top: "64px", right: 0, width: "400px", height: "calc(100% - 64px)", backgroundColor: "#fff", zIndex: 999, padding: "30px", boxShadow: "-5px 0 25px rgba(0,0,0,0.07)", overflowY: "auto", display: "flex", flexDirection: "column", borderLeft: "1px solid #eee" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
-              <h2 style={{ fontSize: "20px", fontWeight: "bold" }}>Add New Vendor Entry</h2>
-              <button onClick={() => setShowForm(false)} style={{ border: "none", background: "none", fontSize: "22px", cursor: "pointer", color: "#bbb" }}>✕</button>
-            </div>
-
-            <form onSubmit={saveVendor} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              {/* Form Fields */}
+          <div onClick={() => setShowForm(false)} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.15)", zIndex: 998 }} />
+          <div style={{ position: "fixed", top: 0, right: 0, width: "400px", height: "100%", backgroundColor: "#fff", zIndex: 999, padding: "30px", overflowY: "auto", boxShadow: "-5px 0 25px rgba(0,0,0,0.1)" }}>
+            <h2 style={{ marginBottom: "20px" }}>Add New Record</h2>
+            
+            <form onSubmit={saveVendor} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+              
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Date</label>
-                <input name="date" type="date" required onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Invoice No</label>
-                <input name="invoice_no" type="text" required onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Description</label>
-                <input name="description" type="text" onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Debit (Amount Paid)</label>
-                <input name="debit" type="number" onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Credit (Amount Owed)</label>
-                <input name="credit" type="number" onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", marginBottom: "6px", color: "#4b5563" }}>Balance</label>
-                <input name="balance" type="number" onChange={handleChange} style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e5e7eb", outline: "none", boxSizing: "border-box", fontSize: "14px" }} />
+                <label style={{ fontSize: "13px", fontWeight: "bold", display: "block", marginBottom: "5px" }}>Select Currency</label>
+                <select value={formCurrency} onChange={(e) => handleCurrencyChange(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }}>
+                  <option value="USD">USD ($)</option>
+                  <option value="PKR">PKR (Rs)</option>
+                  <option value="AED">AED (Dh)</option>
+                </select>
               </div>
 
-              <div style={{ marginTop: "25px", display: "flex", gap: "12px" }}>
-                <button type="submit" style={{ flex: 2, backgroundColor: "#000", color: "#fff", padding: "14px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "600", fontSize: "14px" }}>
-                  Save Entry
-                </button>
-                <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, backgroundColor: "#f3f4f6", color: "#4b5563", padding: "14px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "600", fontSize: "14px" }}>
-                  Cancel
-                </button>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "bold", display: "block", marginBottom: "5px" }}>Current USD Rate (to PKR)</label>
+                <input type="number" value={exchangeRates.PKR} onChange={(e) => handleManualRateChange(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }} />
               </div>
+
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "bold", display: "block", marginBottom: "5px" }}>Transaction Date</label>
+                <input name="date" type="date" required value={form.date || ""} onChange={handleChange} style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "bold", display: "block", marginBottom: "5px" }}>Invoice Number</label>
+                <input name="invoice_no" value={form.invoice_no || ""} onChange={handleChange} placeholder="e.g. INV-001" style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "bold", display: "block", marginBottom: "5px" }}>Description / Details</label>
+                <input name="description" value={form.description || ""} onChange={handleChange} placeholder="Details about payment" style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "bold", display: "block", marginBottom: "5px" }}>Debit Amount ({currencySymbols[formCurrency]})</label>
+                <input name="debit" type="number" step="any" value={(form.debit || 0) === 0 ? "" : form.debit} onChange={handleChange} placeholder="0.00" style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "bold", display: "block", marginBottom: "5px" }}>Credit Amount ({currencySymbols[formCurrency]})</label>
+                <input name="credit" type="number" step="any" value={(form.credit || 0) === 0 ? "" : form.credit} onChange={handleChange} placeholder="0.00" style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "bold", display: "block", marginBottom: "5px" }}>Current Balance (Calculated)</label>
+                <input 
+                  name="balance" 
+                  type="number" 
+                  value={form.balance || 0} 
+                  readOnly 
+                  style={{ 
+                    width: "100%", 
+                    padding: "10px", 
+                    borderRadius: "6px", 
+                    border: "1px solid #ddd", 
+                    backgroundColor: "#f9f9f9" 
+                  }} 
+                />
+              </div>
+
+              <button type="submit" style={{ backgroundColor: "#000", color: "#fff", padding: "12px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "bold", marginTop: "10px" }}>Save Entry</button>
             </form>
           </div>
         </>
