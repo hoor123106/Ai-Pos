@@ -2,8 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import styles from "./dashboardCards.module.css";
-// Sahi path check karlein apne folders ke mutabiq
-import { supabase } from "../../utils/supabase/client"; 
+import Dexie from "dexie";
+
+// Dono Databases ko yahan access karenge
+const customerDB = new Dexie("CustomerDB");
+customerDB.version(1).stores({ customer_records: "++id" });
+
+const vendorDB = new Dexie("VendorDB");
+vendorDB.version(2).stores({ vendor_records: "++id" });
 
 const Card = ({ title, value, percent, icon, trend }) => {
   return (
@@ -29,42 +35,29 @@ const Card = ({ title, value, percent, icon, trend }) => {
 export default function DashboardCards() {
   const [counts, setCounts] = useState({ customers: 0, vendors: 0 });
 
-  // --- Real-time Data Fetch from Supabase ---
-  const fetchCounts = async () => {
+  const fetchLocalCounts = async () => {
     try {
-      // Customers ka count database se
-      const { count: customerCount, error: custErr } = await supabase
-        .from("customer_records")
-        .select("*", { count: 'exact', head: true });
+      // Local Dexie DB se counts nikalna
+      const customerCount = await customerDB.customer_records.count();
+      const vendorCount = await vendorDB.vendor_records.count();
 
-      // Vendors ka count database se
-      const { count: vendorCount, error: vendErr } = await supabase
-        .from("vendor_records")
-        .select("*", { count: 'exact', head: true });
-
-      if (!custErr && !vendErr) {
-        setCounts({
-          customers: customerCount || 0,
-          vendors: vendorCount || 0
-        });
-      }
+      setCounts({
+        customers: customerCount || 0,
+        vendors: vendorCount || 0
+      });
     } catch (error) {
-      console.error("Error fetching counts:", error);
+      console.error("Error fetching local counts:", error);
     }
   };
 
   useEffect(() => {
-    fetchCounts();
+    // Pehli baar load hone par count uthao
+    fetchLocalCounts();
 
-    // (Optional) Agar aap chahte hain ke page refresh kiye baghair update ho:
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-        fetchCounts();
-      })
-      .subscribe();
+    // Har 2 second baad check karega agar koi naya data add hua ho (Auto-refresh)
+    const interval = setInterval(fetchLocalCounts, 2000);
 
-    return () => supabase.removeChannel(channel);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -72,7 +65,7 @@ export default function DashboardCards() {
       <Card
         title="Total Customers"
         value={counts.customers}
-        percent="Live"
+        percent="Local"
         trend="up"
         icon="/images/community.png"
       />
@@ -80,7 +73,7 @@ export default function DashboardCards() {
       <Card
         title="Total Vendors"
         value={counts.vendors}
-        percent="Live"
+        percent="Local"
         trend="up"
         icon="/images/productsBlue.png"
       />

@@ -1,8 +1,15 @@
 // app/sign-up/page.js
 "use client";
 import { useState } from "react";
-import { supabase } from "../../app/utils/supabase/client"
+import { supabase } from "../../app/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import Dexie from "dexie";
+
+// Database Initialization
+const authDb = new Dexie("AuthDB");
+authDb.version(1).stores({
+  user_session: "email" 
+});
 
 export default function SignUpPage() {
   const [email, setEmail] = useState("");
@@ -14,55 +21,65 @@ export default function SignUpPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Supabase sign up function
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      // 1. Supabase mein user create karein
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    setLoading(false);
+      if (error) throw error;
 
-    if (error) {
+      if (data.user) {
+        // 2. Offline Database (Dexie) mein record save karein
+        await authDb.user_session.put({
+          email: email,
+          status: "registered",
+          created_at: new Date().toISOString()
+        });
+
+        alert("Success! Check your email for a confirmation link.");
+        router.push("/sign-in");
+      }
+    } catch (error) {
       alert(`Sign Up Failed: ${error.message}`);
-    } else if (data.user) {
-      alert("Success! Check your email for a confirmation link to sign in.");
-      // Email verification zaroori hai, isliye sign-in page par bhej rahe hain
-      router.push("/sign-in");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <form onSubmit={handleSignUp} className="p-8 border rounded shadow-lg w-full max-w-sm">
-        <h2 className="text-2xl mb-6 text-center">Create Your Account</h2>
+    <div className="flex justify-center items-center h-screen bg-gray-50">
+      <form onSubmit={handleSignUp} className="p-8 border rounded shadow-lg w-full max-w-sm bg-white">
+        <h2 className="text-2xl font-bold mb-6 text-center">Create Your Account</h2>
 
         <label className="block mb-4">
-          Email:
+          <span className="text-sm font-semibold">Email:</span>
           <input
             type="email"
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border p-2 mt-1 w-full rounded"
+            className="border p-2 mt-1 w-full rounded focus:outline-blue-500"
             required
           />
         </label>
 
         <label className="block mb-6">
-          Password:
+          <span className="text-sm font-semibold">Password:</span>
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border p-2 mt-1 w-full rounded"
+            className="border p-2 mt-1 w-full rounded focus:outline-blue-500"
             required
           />
         </label>
 
         <button
           type="submit"
-          className="bg-green-500 hover:bg-green-600 text-white p-3 w-full rounded font-semibold"
+          className="bg-green-600 hover:bg-green-700 text-white p-3 w-full rounded font-semibold transition-colors"
           disabled={loading}
         >
           {loading ? "Creating..." : "Sign Up"}
@@ -71,7 +88,6 @@ export default function SignUpPage() {
         <p className="mt-4 text-center text-sm">
           Already have an account? <a href="/sign-in" className="text-blue-500 hover:underline">Sign In</a>
         </p>
-
       </form>
     </div>
   );
