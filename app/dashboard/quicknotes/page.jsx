@@ -13,64 +13,49 @@ export default function QuickNotes() {
     entry_date: new Date().toISOString().split("T")[0],
     name: "",
     description: "",
+    ref_no: "", // New Field
     debit: 0,
     credit: 0,
   });
 
-  // --- IndexedDB Logic Start ---
-
-  // Database Open/Initialize karna
+  // --- IndexedDB Logic ---
   const openDB = () => {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open("LedgerDB", 1);
-
       request.onupgradeneeded = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains("transactions")) {
           db.createObjectStore("transactions", { keyPath: "id" });
         }
       };
-
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject("IndexedDB open error");
+      request.onerror = () => reject("IndexedDB error");
     });
   };
 
-  // Data Load karna
   const loadData = async () => {
     try {
       const db = await openDB();
       const tx = db.transaction("transactions", "readonly");
       const store = tx.objectStore("transactions");
       const request = store.getAll();
-
       request.onsuccess = () => {
-        // Latest entries top par dikhane ke liye reverse kiya hai
         setEntries(request.result.sort((a, b) => b.id - a.id));
       };
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  // Data Save ya Update karna
   const saveDataToDB = async (newEntry) => {
     try {
       const db = await openDB();
       const tx = db.transaction("transactions", "readwrite");
       const store = tx.objectStore("transactions");
-      store.put(newEntry); // put() add bhi karta hai aur update bhi (agar ID match ho)
+      store.put(newEntry);
       return tx.complete;
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // --- IndexedDB Logic End ---
+  useEffect(() => { loadData(); }, []);
 
   const totalDebit = entries.reduce((acc, curr) => acc + curr.debit, 0);
   const totalCredit = entries.reduce((acc, curr) => acc + curr.credit, 0);
@@ -78,26 +63,27 @@ export default function QuickNotes() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const netTotal = Number(form.credit) - Number(form.debit);
-    
     const entryData = {
       ...form,
       id: isEditing ? currentId : Date.now(),
-      total: netTotal,
+      total: Number(form.credit) - Number(form.debit),
     };
 
-    // DB mein save karein
     await saveDataToDB(entryData);
-    
-    // UI update karein
     loadData();
-    
     setShowModal(false);
     resetForm();
   };
 
   const resetForm = () => {
-    setForm({ entry_date: new Date().toISOString().split("T")[0], name: "", description: "", debit: 0, credit: 0 });
+    setForm({
+      entry_date: new Date().toISOString().split("T")[0],
+      name: "",
+      description: "",
+      ref_no: "",
+      debit: 0,
+      credit: 0
+    });
     setIsEditing(false);
     setCurrentId(null);
   };
@@ -110,30 +96,28 @@ export default function QuickNotes() {
         <header className={styles.header}>
           <div>
             <h1 style={{ fontSize: "28px", fontWeight: "800" }}>Financial Ledger</h1>
-            <p style={{ opacity: 0.7 }}>Manage your business cash flow (IndexedDB)</p>
+            <p style={{ opacity: 0.7 }}>Transaction Management System</p>
           </div>
           <button
             onClick={() => { resetForm(); setShowModal(true); }}
             style={{ backgroundColor: "#10b981", color: "white", padding: "12px 24px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "bold" }}
           >
-            + New Transaction
+            + New Entry
           </button>
         </header>
 
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
-            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>CASH OUT (DEBIT)</span>
-            <h2 style={{ color: "#ef4444", margin: "10px 0 0" }}>Rs. {totalDebit.toLocaleString()}</h2>
+            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>DEBIT</span>
+            <h2 style={{ color: "#ef4444", margin: "10px 0 0" }}>{totalDebit.toLocaleString()}</h2>
           </div>
           <div className={styles.statCard}>
-            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>CASH IN (CREDIT)</span>
-            <h2 style={{ color: "#10b981", margin: "10px 0 0" }}>Rs. {totalCredit.toLocaleString()}</h2>
+            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>CREDIT</span>
+            <h2 style={{ color: "#10b981", margin: "10px 0 0" }}>{totalCredit.toLocaleString()}</h2>
           </div>
-          <div className={`${styles.statCard} ${styles.balanceCard} ${netBalance < 0 ? styles.negativeBalance : ""}`}>
-            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>BALANCE</span>
-            <h2 style={{ color: "#1f2937", margin: "10px 0 0" }}>
-              {netBalance >= 0 ? "▲ " : "▼ "} Rs. {Math.abs(netBalance).toLocaleString()}
-            </h2>
+          <div className={`${styles.statCard} ${styles.balanceCard}`}>
+            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>NET BALANCE</span>
+            <h2 style={{ color: "#1f2937", margin: "10px 0 0" }}>{netBalance.toLocaleString()}</h2>
           </div>
         </div>
 
@@ -143,9 +127,10 @@ export default function QuickNotes() {
               <tr style={{ backgroundColor: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
                 <th style={{ padding: "16px", textAlign: "left" }}>Date</th>
                 <th style={{ padding: "16px", textAlign: "left" }}>Name</th>
+                <th style={{ padding: "16px", textAlign: "left" }}>Ref No.</th>
+                <th style={{ padding: "16px", textAlign: "left" }}>Description</th>
                 <th style={{ padding: "16px", textAlign: "right" }}>Debit</th>
                 <th style={{ padding: "16px", textAlign: "right" }}>Credit</th>
-                <th style={{ padding: "16px", textAlign: "right" }}>Balance</th>
                 <th style={{ padding: "16px", textAlign: "center" }}>Action</th>
               </tr>
             </thead>
@@ -154,11 +139,12 @@ export default function QuickNotes() {
                 <tr key={item.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                   <td style={{ padding: "16px" }}>{item.entry_date}</td>
                   <td style={{ padding: "16px", fontWeight: "bold" }}>{item.name}</td>
+                  <td style={{ padding: "16px" }}>{item.ref_no || "-"}</td>
+                  <td style={{ padding: "16px" }}>{item.description || "-"}</td>
                   <td style={{ padding: "16px", textAlign: "right", color: "#ef4444" }}>{item.debit.toLocaleString()}</td>
                   <td style={{ padding: "16px", textAlign: "right", color: "#10b981" }}>{item.credit.toLocaleString()}</td>
-                  <td style={{ padding: "16px", textAlign: "right", fontWeight: "bold" }}>{item.total.toLocaleString()}</td>
                   <td style={{ padding: "16px", textAlign: "center" }}>
-                    <button onClick={() => { setIsEditing(true); setCurrentId(item.id); setForm(item); setShowModal(true); }} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}>Edit</button>
+                    <button onClick={() => { setIsEditing(true); setCurrentId(item.id); setForm(item); setShowModal(true); }} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
                   </td>
                 </tr>
               ))}
@@ -170,13 +156,19 @@ export default function QuickNotes() {
       {showModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
-            <h2 style={{ marginBottom: "20px" }}>{isEditing ? "Update" : "Add"} Transaction</h2>
+            <h2 style={{ marginBottom: "20px" }}>{isEditing ? "Edit" : "New"} Entry</h2>
             <form onSubmit={handleSave}>
               <label>Date</label>
               <input type="date" className={styles.inputField} value={form.entry_date} onChange={e => setForm({ ...form, entry_date: e.target.value })} required />
 
               <label>Name</label>
               <input type="text" className={styles.inputField} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+
+              <label>Reference No.</label>
+              <input type="text" className={styles.inputField} value={form.ref_no} onChange={e => setForm({ ...form, ref_no: e.target.value })} />
+
+              <label>Description</label>
+              <textarea className={styles.inputField} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows="2" />
 
               <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
                 <div style={{ flex: 1 }}>
@@ -188,14 +180,11 @@ export default function QuickNotes() {
                   <input type="number" className={styles.inputField} value={form.credit} onChange={e => setForm({ ...form, credit: Number(e.target.value) })} />
                 </div>
               </div>
+
               <button type="submit" style={{ width: "100%", padding: "14px", background: "#1f2937", color: "white", borderRadius: "8px", marginTop: "20px", border: "none", cursor: "pointer", fontWeight: "bold" }}>
                 Save Transaction
               </button>
-              <button 
-                type="button" 
-                onClick={() => setShowModal(false)}
-                style={{ width: "100%", background: "none", border: "none", marginTop: "10px", cursor: "pointer", color: "#6b7280" }}
-              >
+              <button type="button" onClick={() => setShowModal(false)} style={{ width: "100%", background: "none", border: "none", marginTop: "10px", cursor: "pointer", color: "#6b7280" }}>
                 Cancel
               </button>
             </form>

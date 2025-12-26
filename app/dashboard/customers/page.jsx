@@ -6,25 +6,25 @@ import Dexie from "dexie";
 // Database Setup
 const db = new Dexie("CustomerDB");
 db.version(1).stores({
-  customer_records: "++id, date, account_name, currency, description, reference" 
+  customer_records: "++id, date, account_name, currency, description, reference"
 });
 
 export default function Customers() {
   const [showForm, setShowForm] = useState(false);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [exchangeRates, setExchangeRates] = useState({ USD: 1, PKR: 280, AED: 3.67 });
   const [formCurrency, setFormCurrency] = useState("USD");
 
   const [form, setForm] = useState({
-    date: null, 
-    account_name: "", 
-    description: "", 
+    date: null,
+    account_name: "",
+    description: "",
     qty: 0,
-    reference: "", 
-    debit: 0, 
-    credit: 0, 
+    reference: "",
+    debit: 0,
+    credit: 0,
     balance: 0,
   });
 
@@ -46,7 +46,7 @@ export default function Customers() {
 
   const formatValue = (val, rowCurrency) => {
     const amount = val !== undefined && val !== null ? val : 0;
-    const activeCurrency = rowCurrency || "USD"; 
+    const activeCurrency = rowCurrency || "USD";
     const symbol = currencySymbols[activeCurrency] || "";
     return `${symbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
@@ -54,15 +54,15 @@ export default function Customers() {
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     const numValue = type === "number" ? (value === "" ? 0 : parseFloat(value)) : value;
-    
+
     setForm((prev) => {
-        const updated = { ...prev, [name]: numValue };
-        if (name === "debit" || name === "credit") {
-            const d = name === "debit" ? (value === "" ? 0 : parseFloat(value)) : (prev.debit || 0);
-            const c = name === "credit" ? (value === "" ? 0 : parseFloat(value)) : (prev.credit || 0);
-            updated.balance = parseFloat((d - c).toFixed(2));
-        }
-        return updated;
+      const updated = { ...prev, [name]: numValue };
+      if (name === "debit" || name === "credit") {
+        const d = name === "debit" ? (value === "" ? 0 : parseFloat(value)) : (prev.debit || 0);
+        const c = name === "credit" ? (value === "" ? 0 : parseFloat(value)) : (prev.credit || 0);
+        updated.balance = parseFloat((d - c).toFixed(2));
+      }
+      return updated;
     });
   };
 
@@ -83,10 +83,10 @@ export default function Customers() {
 
   const saveCustomer = async (e) => {
     e.preventDefault();
-    await db.customer_records.add({ 
-      ...form, 
-      currency: formCurrency, 
-      created_at: new Date().toISOString() 
+    await db.customer_records.add({
+      ...form,
+      currency: formCurrency,
+      created_at: new Date().toISOString()
     });
     setShowForm(false);
     fetchCustomers();
@@ -156,7 +156,7 @@ export default function Customers() {
           <div onClick={() => setShowForm(false)} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.2)", zIndex: 998 }} />
           <div style={{ position: "fixed", top: 0, right: 0, width: "400px", height: "100%", backgroundColor: "#fff", zIndex: 999, padding: "30px", overflowY: "auto", boxShadow: "-5px 0 20px rgba(0,0,0,0.1)" }}>
             <h2 style={{ marginBottom: "20px" }}>Add Entry</h2>
-            
+
             <form onSubmit={saveCustomer}>
               {/* Currency & Rates Section */}
               <div style={{ padding: "15px", background: "#f8f9fa", borderRadius: "10px", border: "1px solid #eee" }}>
