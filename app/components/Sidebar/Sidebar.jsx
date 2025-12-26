@@ -32,6 +32,13 @@ export default function Sidebar() {
       activeIcon: "/images/communityWhite.png",
       cls: styles.customers,
     },
+       {
+      name: "Quick Notes",
+      href: "/dashboard/quicknotes",
+      icon: "/images/customers-icon.png",
+      activeIcon: "/images/communityWhite.png",
+      cls: styles.customers,
+    },
       {
       name: "Settings",
       href: "/dashboard/setting-pos",
