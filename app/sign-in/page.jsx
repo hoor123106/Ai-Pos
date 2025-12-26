@@ -1,8 +1,15 @@
 // app/sign-in/page.js
 "use client";
 import { useState } from "react";
-import { supabase } from "../../app/utils/supabase/client"
+import { supabase } from "../../app/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import Dexie from "dexie";
+
+// Database Initialization
+const authDb = new Dexie("AuthDB");
+authDb.version(1).stores({
+  user_session: "email"
+});
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -14,54 +21,64 @@ export default function SignInPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Supabase sign in function
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // 1. Supabase Auth
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    setLoading(false);
+      if (error) throw error;
 
-    if (error) {
-      alert(`Login Failed: ${error.message}`);
-    } else {
-      // Login successful, dashboard par redirect karen
+      // 2. Offline Session save karein
+      await authDb.user_session.put({
+        email: email,
+        isLoggedIn: true,
+        last_login: new Date().toISOString()
+      });
+
+      // Dashboard par bhejein
       router.push("/dashboard");
+
+    } catch (error) {
+      alert(`Login Failed: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <form onSubmit={handleSignIn} className="p-8 border rounded shadow-lg w-full max-w-sm">
-        <h2 className="text-2xl mb-6 text-center">Sign In</h2>
+    <div className="flex justify-center items-center h-screen bg-gray-50">
+      <form onSubmit={handleSignIn} className="p-8 border rounded shadow-lg w-full max-w-sm bg-white">
+        <h2 className="text-2xl font-bold mb-6 text-center">Sign In</h2>
 
         <label className="block mb-4">
-          Email:
+          <span className="text-sm font-semibold">Email:</span>
           <input
             type="email"
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border p-2 mt-1 w-full rounded"
+            className="border p-2 mt-1 w-full rounded focus:outline-blue-500"
             required
           />
         </label>
 
         <label className="block mb-6">
-          Password:
+          <span className="text-sm font-semibold">Password:</span>
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border p-2 mt-1 w-full rounded"
+            className="border p-2 mt-1 w-full rounded focus:outline-blue-500"
             required
           />
         </label>
 
         <button
           type="submit"
-          className="bg-blue-500 hover:bg-blue-600 text-white p-3 w-full rounded font-semibold"
+          className="bg-blue-600 hover:bg-blue-700 text-white p-3 w-full rounded font-semibold transition-colors"
           disabled={loading}
         >
           {loading ? "Logging In..." : "Sign In"}
@@ -70,7 +87,6 @@ export default function SignInPage() {
         <p className="mt-4 text-center text-sm">
           Don't have an account? <a href="/sign-up" className="text-blue-500 hover:underline">Sign Up</a>
         </p>
-
       </form>
     </div>
   );
