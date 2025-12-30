@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Dexie from "dexie";
 
-// Database Setup
 const db = new Dexie("VendorDB");
 db.version(2).stores({
   vendor_records: "++id, date, vendor_name, currency, description, reference"
@@ -11,7 +10,7 @@ db.version(2).stores({
 
 export default function Vendors() {
   const [showForm, setShowForm] = useState(false);
-  const [selectedGroupData, setSelectedGroupData] = useState(null); // Ref No group logic
+  const [selectedGroupData, setSelectedGroupData] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,12 +44,10 @@ export default function Vendors() {
 
   useEffect(() => { fetchVendors(); }, []);
 
-  // --- TOP CARDS CALCULATION (Total of all Vendors) ---
   const totalDebitAll = rows.reduce((acc, curr) => acc + (Number(curr.debit) || 0), 0);
   const totalCreditAll = rows.reduce((acc, curr) => acc + (Number(curr.credit) || 0), 0);
   const netBalanceAll = totalDebitAll - totalCreditAll;
 
-  // --- POPUP LOGIC: Reference Number ke mutabiq Group Report ---
   const handleVendorClick = (refNo, fallbackName) => {
     const history = rows.filter(r =>
       refNo ? r.reference === refNo : r.vendor_name === fallbackName
@@ -138,14 +135,17 @@ export default function Vendors() {
         </button>
       </div>
 
-      {/* --- TOP 2 SUMMARY CARDS --- */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "30px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "30px" }}>
         <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL BUYING (DEBIT)</span>
+          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL DEBIT (BUYING)</span>
           <h2 style={{ color: "#e03131", margin: "10px 0 0", fontSize: "24px" }}>{formatValue(totalDebitAll, "USD")}</h2>
         </div>
+        <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
+          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL CREDIT (RETURNS)</span>
+          <h2 style={{ color: "#0ca678", margin: "10px 0 0", fontSize: "24px" }}>{formatValue(totalCreditAll, "USD")}</h2>
+        </div>
         <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "2px solid #000" }}>
-          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>NET PAYABLES (BALANCE)</span>
+          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL NET BALANCE</span>
           <h2 style={{ color: "#000", margin: "10px 0 0", fontSize: "24px" }}>{formatValue(netBalanceAll, "USD")}</h2>
         </div>
       </div>
@@ -192,31 +192,25 @@ export default function Vendors() {
         </table>
       </div>
 
-      {/* --- CENTER POPUP (REFERENCE GROUP REPORT) --- */}
       {selectedGroupData && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
           <div style={{ backgroundColor: "#fff", width: "750px", maxHeight: "90vh", borderRadius: "16px", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column" }}>
-
             <div style={{ backgroundColor: "#1a5f7a", color: "#fff", padding: "25px", position: "relative" }}>
               <h2 style={{ margin: 0, fontSize: "22px" }}>VENDOR REFERENCE REPORT: {selectedGroupData.reference}</h2>
               <p style={{ margin: "5px 0 0", opacity: 0.8 }}>Vendor: {selectedGroupData.name}</p>
               <button onClick={() => setSelectedGroupData(null)} style={{ position: "absolute", top: "20px", right: "20px", background: "none", border: "none", color: "#fff", fontSize: "24px", cursor: "pointer" }}>&times;</button>
             </div>
-
             <div style={{ padding: "30px", overflowY: "auto" }}>
-              {/* Summary Totals */}
               <div style={{ display: "flex", gap: "20px", marginBottom: "25px" }}>
                 <div style={{ flex: 1, background: "#fef2f2", padding: "15px", borderRadius: "10px", border: "1px solid #fecaca" }}>
-                  <small style={{ color: "#991b1b", fontWeight: "bold" }}>TOTAL BUYING (DEBIT)</small>
+                  <small style={{ color: "#991b1b", fontWeight: "bold" }}>TOTAL DEBIT</small>
                   <div style={{ fontSize: "18px", fontWeight: "bold" }}>{formatValue(selectedGroupData.totalDebit)}</div>
                 </div>
                 <div style={{ flex: 1, background: "#f0fdf4", padding: "15px", borderRadius: "10px", border: "1px solid #bbf7d0" }}>
-                  <small style={{ color: "#166534", fontWeight: "bold" }}>TOTAL RETURNS (CREDIT)</small>
+                  <small style={{ color: "#166534", fontWeight: "bold" }}>TOTAL CREDIT</small>
                   <div style={{ fontSize: "18px", fontWeight: "bold" }}>{formatValue(selectedGroupData.totalCredit)}</div>
                 </div>
               </div>
-
-              {/* Breakdown Table */}
               <h4 style={{ borderBottom: "2px solid #1a5f7a", paddingBottom: "8px", color: "#1a5f7a", marginBottom: "15px" }}>Financial Analysis</h4>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", marginBottom: "25px" }}>
                 <thead>
@@ -238,21 +232,17 @@ export default function Vendors() {
                   ))}
                 </tbody>
               </table>
-
-              {/* Final Statements */}
               <div style={{ background: "#f8f9fa", padding: "15px", borderRadius: "8px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}><span>Gross Profit / Loss:</span><span style={{ fontWeight: "bold", color: selectedGroupData.grossProfit >= 0 ? "red" : "green" }}>{formatValue(selectedGroupData.grossProfit)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}><span>Gross Total:</span><span style={{ fontWeight: "bold" }}>{formatValue(selectedGroupData.totalDebit)}</span></div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}><span>Trial Balance:</span><span style={{ fontWeight: "bold" }}>{selectedGroupData.trialBalance}</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Net Payable Balance:</span><span style={{ fontWeight: "bold" }}>{formatValue(selectedGroupData.netBalance)}</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span>Net Payable:</span><span style={{ fontWeight: "bold" }}>{formatValue(selectedGroupData.netBalance)}</span></div>
               </div>
-
               <button onClick={() => setSelectedGroupData(null)} style={{ width: "100%", padding: "14px", backgroundColor: "#1a5f7a", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold", marginTop: "20px" }}>Close Report</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- ADD VENDOR FORM --- */}
       {showForm && (
         <>
           <div onClick={() => setShowForm(false)} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.2)", zIndex: 998 }} />
