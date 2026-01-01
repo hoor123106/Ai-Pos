@@ -12,10 +12,10 @@ export default function QuickNotes() {
   const [form, setForm] = useState({
     entry_date: new Date().toISOString().split("T")[0],
     name: "",
-    description: "",
-    ref_no: "", // New Field
-    debit: 0,
-    credit: 0,
+    item_name: "",
+    ref_no: "",
+    debit: "", // 0 ki jagah empty string
+    credit: "", // 0 ki jagah empty string
   });
 
   // --- IndexedDB Logic ---
@@ -40,7 +40,13 @@ export default function QuickNotes() {
       const store = tx.objectStore("transactions");
       const request = store.getAll();
       request.onsuccess = () => {
-        setEntries(request.result.sort((a, b) => b.id - a.id));
+        const sortedData = request.result.sort((a, b) => a.id - b.id);
+        let runningBal = 0;
+        const entriesWithBalance = sortedData.map((item) => {
+          runningBal += (Number(item.credit) || 0) - (Number(item.debit) || 0);
+          return { ...item, running_balance: runningBal };
+        });
+        setEntries(entriesWithBalance.reverse());
       };
     } catch (err) { console.error(err); }
   };
@@ -57,16 +63,28 @@ export default function QuickNotes() {
 
   useEffect(() => { loadData(); }, []);
 
-  const totalDebit = entries.reduce((acc, curr) => acc + curr.debit, 0);
-  const totalCredit = entries.reduce((acc, curr) => acc + curr.credit, 0);
+  const totalDebit = entries.reduce((acc, curr) => acc + (Number(curr.debit) || 0), 0);
+  const totalCredit = entries.reduce((acc, curr) => acc + (Number(curr.credit) || 0), 0);
   const netBalance = totalCredit - totalDebit;
+
+  // Glitch Fix: Input handling logic
+  const handleNumberChange = (field, value) => {
+    // Agar value khali hai to khali rakho, warna number mein convert karo
+    // Isse leading zero wala masla hal ho jayega
+    if (value === "") {
+      setForm({ ...form, [field]: "" });
+    } else {
+      setForm({ ...form, [field]: Number(value) });
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     const entryData = {
       ...form,
       id: isEditing ? currentId : Date.now(),
-      total: Number(form.credit) - Number(form.debit),
+      debit: Number(form.debit) || 0, // Save karte waqt wapis number bana do
+      credit: Number(form.credit) || 0,
     };
 
     await saveDataToDB(entryData);
@@ -79,10 +97,10 @@ export default function QuickNotes() {
     setForm({
       entry_date: new Date().toISOString().split("T")[0],
       name: "",
-      description: "",
+      item_name: "",
       ref_no: "",
-      debit: 0,
-      credit: 0
+      debit: "",
+      credit: "",
     });
     setIsEditing(false);
     setCurrentId(null);
@@ -91,32 +109,28 @@ export default function QuickNotes() {
   return (
     <div className={styles.container}>
       <div className={styles.headerBg}></div>
-
       <div className={styles.mainWrapper}>
         <header className={styles.header}>
           <div>
             <h1 style={{ fontSize: "28px", fontWeight: "800" }}>Financial Ledger</h1>
             <p style={{ opacity: 0.7 }}>Transaction Management System</p>
           </div>
-          <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            style={{ backgroundColor: "#10b981", color: "white", padding: "12px 24px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
+          <button onClick={() => { resetForm(); setShowModal(true); }} className={styles.addBtn}>
             + New Entry
           </button>
         </header>
 
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
-            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>DEBIT</span>
+            <span className={styles.statLabel}>TOTAL DEBIT (-)</span>
             <h2 style={{ color: "#ef4444", margin: "10px 0 0" }}>{totalDebit.toLocaleString()}</h2>
           </div>
           <div className={styles.statCard}>
-            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>CREDIT</span>
+            <span className={styles.statLabel}>TOTAL CREDIT (+)</span>
             <h2 style={{ color: "#10b981", margin: "10px 0 0" }}>{totalCredit.toLocaleString()}</h2>
           </div>
-          <div className={`${styles.statCard} ${styles.balanceCard}`}>
-            <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>NET BALANCE</span>
+          <div className={`${styles.statCard} ${styles.balanceCard} ${netBalance < 0 ? styles.negativeBalance : ""}`}>
+            <span className={styles.statLabel}>NET BALANCE</span>
             <h2 style={{ color: "#1f2937", margin: "10px 0 0" }}>{netBalance.toLocaleString()}</h2>
           </div>
         </div>
@@ -127,24 +141,40 @@ export default function QuickNotes() {
               <tr style={{ backgroundColor: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
                 <th style={{ padding: "16px", textAlign: "left" }}>Date</th>
                 <th style={{ padding: "16px", textAlign: "left" }}>Name</th>
-                <th style={{ padding: "16px", textAlign: "left" }}>Ref No.</th>
-                <th style={{ padding: "16px", textAlign: "left" }}>Description</th>
+                <th style={{ padding: "16px", textAlign: "left" }}>Item Name</th>
                 <th style={{ padding: "16px", textAlign: "right" }}>Debit</th>
                 <th style={{ padding: "16px", textAlign: "right" }}>Credit</th>
+                <th style={{ padding: "16px", textAlign: "right", color: "#6366f1" }}>Balance</th>
                 <th style={{ padding: "16px", textAlign: "center" }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {entries.map((item) => (
-                <tr key={item.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                <tr key={item.id} className={styles.tableRow}>
                   <td style={{ padding: "16px" }}>{item.entry_date}</td>
                   <td style={{ padding: "16px", fontWeight: "bold" }}>{item.name}</td>
-                  <td style={{ padding: "16px" }}>{item.ref_no || "-"}</td>
-                  <td style={{ padding: "16px" }}>{item.description || "-"}</td>
-                  <td style={{ padding: "16px", textAlign: "right", color: "#ef4444" }}>{item.debit.toLocaleString()}</td>
-                  <td style={{ padding: "16px", textAlign: "right", color: "#10b981" }}>{item.credit.toLocaleString()}</td>
+                  <td style={{ padding: "16px" }}>{item.item_name || "-"}</td>
+                  <td style={{ padding: "16px", textAlign: "right", color: "#ef4444" }}>
+                    {item.debit > 0 ? item.debit.toLocaleString() : ""}
+                  </td>
+                  <td style={{ padding: "16px", textAlign: "right", color: "#10b981" }}>
+                    {item.credit > 0 ? item.credit.toLocaleString() : ""}
+                  </td>
+                  <td style={{ padding: "16px", textAlign: "right", fontWeight: "700" }}>
+                    {(item.running_balance || 0).toLocaleString()}
+                  </td>
                   <td style={{ padding: "16px", textAlign: "center" }}>
-                    <button onClick={() => { setIsEditing(true); setCurrentId(item.id); setForm(item); setShowModal(true); }} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
+                    <button
+                      onClick={() => {
+                        setIsEditing(true);
+                        setCurrentId(item.id);
+                        setForm(item);
+                        setShowModal(true);
+                      }}
+                      className={styles.editBtn}
+                    >
+                      Edit
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -158,35 +188,47 @@ export default function QuickNotes() {
           <div className={styles.modalContent}>
             <h2 style={{ marginBottom: "20px" }}>{isEditing ? "Edit" : "New"} Entry</h2>
             <form onSubmit={handleSave}>
-              <label>Date</label>
-              <input type="date" className={styles.inputField} value={form.entry_date} onChange={e => setForm({ ...form, entry_date: e.target.value })} required />
+              <label className={styles.fieldLabel}>Date</label>
+              <input type="date" className={styles.inputField} value={form.entry_date} onChange={(e) => setForm({ ...form, entry_date: e.target.value })} required />
 
-              <label>Name</label>
-              <input type="text" className={styles.inputField} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+              <label className={styles.fieldLabel}>Name</label>
+              <input type="text" className={styles.inputField} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
 
-              <label>Reference No.</label>
-              <input type="text" className={styles.inputField} value={form.ref_no} onChange={e => setForm({ ...form, ref_no: e.target.value })} />
-
-              <label>Description</label>
-              <textarea className={styles.inputField} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows="2" />
+              <label className={styles.fieldLabel}>Item Name</label>
+              <input type="text" className={styles.inputField} value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} />
 
               <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
                 <div style={{ flex: 1 }}>
-                  <label>Debit</label>
-                  <input type="number" className={styles.inputField} value={form.debit} onChange={e => setForm({ ...form, debit: Number(e.target.value) })} />
+                  <label className={styles.fieldLabel}>Debit (Out)</label>
+                  <input
+                    type="number"
+                    className={styles.inputField}
+                    value={form.debit}
+                    onChange={(e) => handleNumberChange("debit", e.target.value)}
+                    placeholder="0"
+                  />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label>Credit</label>
-                  <input type="number" className={styles.inputField} value={form.credit} onChange={e => setForm({ ...form, credit: Number(e.target.value) })} />
+                  <label className={styles.fieldLabel}>Credit (In)</label>
+                  <input
+                    type="number"
+                    className={styles.inputField}
+                    value={form.credit}
+                    onChange={(e) => handleNumberChange("credit", e.target.value)}
+                    placeholder="0"
+                  />
                 </div>
               </div>
 
-              <button type="submit" style={{ width: "100%", padding: "14px", background: "#1f2937", color: "white", borderRadius: "8px", marginTop: "20px", border: "none", cursor: "pointer", fontWeight: "bold" }}>
-                Save Transaction
-              </button>
-              <button type="button" onClick={() => setShowModal(false)} style={{ width: "100%", background: "none", border: "none", marginTop: "10px", cursor: "pointer", color: "#6b7280" }}>
-                Cancel
-              </button>
+              <div className={styles.previewBox}>
+                Current Entry Balance:{" "}
+                <span style={{ color: (Number(form.credit) - Number(form.debit)) >= 0 ? "#10b981" : "#ef4444" }}>
+                  {(Number(form.credit) - Number(form.debit)).toLocaleString()}
+                </span>
+              </div>
+
+              <button type="submit" className={styles.saveBtn}>Save Transaction</button>
+              <button type="button" onClick={() => setShowModal(false)} className={styles.cancelBtn}>Cancel</button>
             </form>
           </div>
         </div>
