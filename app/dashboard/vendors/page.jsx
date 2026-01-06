@@ -42,6 +42,7 @@ export default function Vendors() {
     setLoading(true);
     try {
       const data = await db.vendor_records.toArray();
+      // Base data ko date wise sort karein
       setRows(data.sort((a, b) => new Date(a.date) - new Date(b.date)));
     } catch (error) {
       console.error("Fetch error:", error);
@@ -57,29 +58,38 @@ export default function Vendors() {
   const totalCreditAll = rows.reduce((acc, curr) => acc + (Number(curr.credit) || 0), 0);
   const netBalanceAll = totalDebitAll - totalCreditAll;
 
-  // Auto Balance Calculation for Main Table
+  // Unique Account Names for datalist
+  const uniqueAccountNames = Array.from(new Set(rows.map(r => r.account_name).filter(Boolean)));
+
+  // Auto Balance Calculation for Main Table (Newest on Top)
   let runningBalanceMain = 0;
   const rowsWithAutoBalance = [...rows].map((row) => {
     runningBalanceMain += (Number(row.debit) || 0) - (Number(row.credit) || 0);
     return { ...row, autoBalance: runningBalanceMain };
   }).reverse();
 
+  // Updated Ledger Click Logic (Reference vs Name)
   const handleVendorClick = (refNo, vendorName) => {
-    const history = rows
-      .filter(r => refNo ? r.reference === refNo : r.vendor_name === vendorName)
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    let history = [];
+    
+    if (refNo && refNo !== "—" && refNo !== "" && refNo !== "N/A") {
+        // Agar Reference No hai
+        history = rows.filter(r => r.reference === refNo);
+    } else {
+        // Agar Reference No nahi hai, to vendor ke naam par filter karein
+        history = rows.filter(r => r.vendor_name === vendorName && (!r.reference || r.reference === "—" || r.reference === "" || r.reference === "N/A"));
+    }
+
+    history = history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const totalDebit = history.reduce((sum, r) => sum + (Number(r.debit) || 0), 0);
     const totalCredit = history.reduce((sum, r) => sum + (Number(r.credit) || 0), 0);
     const netBalance = totalDebit - totalCredit;
 
     setSelectedGroupData({
-      reference: refNo || "N/A",
-      name: vendorName,
+      reference: (refNo && refNo !== "—" && refNo !== "N/A") ? refNo : "No Reference No.",
+      name: vendorName || "N/A",
       history,
-      totalDebit,
-      totalCredit,
-      trialBalance: netBalance === 0 ? "Balanced ✅" : "Unbalanced ⚠️",
       netBalance: netBalance,
       currency: history[0]?.currency || "USD"
     });
@@ -87,20 +97,19 @@ export default function Vendors() {
 
   const formatValue = (val, rowCurrency) => {
     const symbol = currencySymbols[rowCurrency || "USD"] || "";
-    return `${symbol} ${(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    return `${symbol} ${(Number(val) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    // Input khali ho to 0 save karein, warna number
-    const numValue = type === "number" ? (value === "" ? 0 : parseFloat(value)) : value;
-
     setForm((prev) => {
-      const updated = { ...prev, [name]: numValue };
+      const updatedValue = type === "number" ? (value === "" ? 0 : parseFloat(value)) : value;
+      const updated = { ...prev, [name]: updatedValue };
+
       if (name === "debit" || name === "credit") {
-        const d = name === "debit" ? (value === "" ? 0 : parseFloat(value)) : (prev.debit || 0);
-        const c = name === "credit" ? (value === "" ? 0 : parseFloat(value)) : (prev.credit || 0);
-        updated.balance = parseFloat((d - c).toFixed(2));
+        const d = name === "debit" ? (parseFloat(value) || 0) : (prev.debit || 0);
+        const c = name === "credit" ? (parseFloat(value) || 0) : (prev.credit || 0);
+        updated.balance = Number((d - c).toFixed(2));
       }
       return updated;
     });
@@ -126,9 +135,9 @@ export default function Vendors() {
     const factor = exchangeRates[newCurr] / exchangeRates[formCurrency];
     setForm((prev) => ({
       ...prev,
-      debit: parseFloat(((prev.debit || 0) * factor).toFixed(2)),
-      credit: parseFloat(((prev.credit || 0) * factor).toFixed(2)),
-      balance: parseFloat(((prev.balance || 0) * factor).toFixed(2)),
+      debit: Number(((prev.debit || 0) * factor).toFixed(2)),
+      credit: Number(((prev.credit || 0) * factor).toFixed(2)),
+      balance: Number(((prev.balance || 0) * factor).toFixed(2)),
     }));
     setFormCurrency(newCurr);
   };
@@ -179,11 +188,11 @@ export default function Vendors() {
       {/* Summary Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "30px" }}>
         <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL DEBIT (BUYING)</span>
+          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL DEBIT (BUY)</span>
           <h2 style={{ color: "#e03131", margin: "10px 0 0", fontSize: "24px" }}>{formatValue(totalDebitAll, "USD")}</h2>
         </div>
         <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
-          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL CREDIT (RETURNS)</span>
+          <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL CREDIT (RET)</span>
           <h2 style={{ color: "#0ca678", margin: "10px 0 0", fontSize: "24px" }}>{formatValue(totalCreditAll, "USD")}</h2>
         </div>
         <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "2px solid #000" }}>
@@ -192,7 +201,7 @@ export default function Vendors() {
         </div>
       </div>
 
-      {/* Main Table */}
+      {/* Table */}
       <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #e5e7eb", overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1200px" }}>
           <thead style={{ backgroundColor: "#fafafa" }}>
@@ -203,8 +212,8 @@ export default function Vendors() {
               <th style={{ padding: "15px" }}>ITEM NAME</th>
               <th style={{ padding: "15px" }}>QTY</th>
               <th style={{ padding: "15px" }}>REF NO.</th>
-              <th style={{ padding: "15px" }}>DEBIT (BUY)</th>
-              <th style={{ padding: "15px" }}>CREDIT (RET)</th>
+              <th style={{ padding: "15px" }}>DEBIT</th>
+              <th style={{ padding: "15px" }}>CREDIT</th>
               <th style={{ padding: "15px" }}>BALANCE</th>
               <th style={{ padding: "15px" }}>ACTION</th>
             </tr>
@@ -225,12 +234,12 @@ export default function Vendors() {
                 <td style={{ padding: "15px" }}>{row.reference || "—"}</td>
                 <td style={{ padding: "15px", color: "#e03131", fontWeight: "bold" }}>{formatValue(row.debit, row.currency)}</td>
                 <td style={{ padding: "15px", color: "#0ca678", fontWeight: "bold" }}>{formatValue(row.credit, row.currency)}</td>
-                <td style={{ padding: "15px", fontWeight: "bold", background: "#f8f9fa" }}>{formatValue(row.autoBalance, row.currency)}</td>
+                <td style={{ padding: "15px", fontWeight: "bold" }}>{formatValue(row.autoBalance, row.currency)}</td>
                 <td style={{ padding: "15px", display: "flex", gap: "10px", justifyContent: "center", alignItems: "center" }}>
-                  <button onClick={() => handleEdit(row)} style={{ color: "#2563eb", border: "none", background: "none", cursor: "pointer" }} title="Edit">
+                  <button onClick={() => handleEdit(row)} style={{ color: "#2563eb", border: "none", background: "none", cursor: "pointer" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </button>
-                  <button onClick={() => deleteVendor(row.id)} style={{ color: "#ff4d4f", border: "none", background: "none", cursor: "pointer" }} title="Delete">
+                  <button onClick={() => deleteVendor(row.id)} style={{ color: "#ff4d4f", border: "none", background: "none", cursor: "pointer" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
                 </td>
@@ -240,15 +249,12 @@ export default function Vendors() {
         </table>
       </div>
 
-      {/* Sidebar Form */}
+      {/* Form Sidebar */}
       {showForm && (
         <>
           <div onClick={closeForm} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.2)", zIndex: 998 }} />
           <div style={{ position: "fixed", top: 0, right: 0, width: "400px", height: "100%", backgroundColor: "#fff", zIndex: 999, padding: "30px", overflowY: "auto", boxShadow: "-5px 0 20px rgba(0,0,0,0.1)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                <h2 style={{ margin: 0 }}>{isEditing ? "Edit Vendor Entry" : "Add Vendor Entry"}</h2>
-                <button onClick={closeForm} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
-            </div>
+            <h2 style={{ marginBottom: "20px" }}>{isEditing ? "Edit Vendor Record" : "New Vendor Record"}</h2>
             <form onSubmit={saveVendor}>
               <div style={{ padding: "15px", background: "#f8f9fa", borderRadius: "10px", border: "1px solid #eee", marginBottom: "15px" }}>
                 <label style={{ fontSize: "13px", fontWeight: "bold" }}>Currency & Rates</label>
@@ -258,98 +264,97 @@ export default function Vendors() {
                   <option value="AED">AED (Dh)</option>
                 </select>
                 <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                  <div style={{ flex: 1 }}><label style={{ fontSize: "10px" }}>PKR Rate</label><input type="number" value={exchangeRates.PKR || ""} onChange={(e) => handleManualRateChange("PKR", e.target.value)} style={{ width: "100%", padding: "5px" }} /></div>
-                  <div style={{ flex: 1 }}><label style={{ fontSize: "10px" }}>AED Rate</label><input type="number" value={exchangeRates.AED || ""} onChange={(e) => handleManualRateChange("AED", e.target.value)} style={{ width: "100%", padding: "5px" }} /></div>
+                  <div style={{ flex: 1 }}><label style={{ fontSize: "10px" }}>PKR Rate</label><input type="number" value={exchangeRates.PKR} onChange={(e) => handleManualRateChange("PKR", e.target.value)} style={{ width: "100%", padding: "5px" }} /></div>
+                  <div style={{ flex: 1 }}><label style={{ fontSize: "10px" }}>AED Rate</label><input type="number" value={exchangeRates.AED} onChange={(e) => handleManualRateChange("AED", e.target.value)} style={{ width: "100%", padding: "5px" }} /></div>
                 </div>
               </div>
+
+              <label style={labelStyle}>Account Name</label>
+              <input name="account_name" value={form.account_name} onChange={handleChange} style={inputStyle} list="vendor-acc-list" />
+              <datalist id="vendor-acc-list">
+                  <option value="Accounts Payable" />
+                  {uniqueAccountNames.map((n, i) => <option key={i} value={n} />)}
+              </datalist>
+
+              <label style={labelStyle}>Vendor Name</label>
+              <input name="vendor_name" value={form.vendor_name} onChange={handleChange} style={inputStyle} required />
 
               <label style={labelStyle}>Date</label>
               <input name="date" type="date" value={form.date} onChange={handleChange} style={inputStyle} />
               
-              <label style={labelStyle}>Vendor Name</label>
-              <input name="vendor_name" value={form.vendor_name} onChange={handleChange} style={inputStyle} required />
-
-              <label style={labelStyle}>Account Name</label>
-              <input name="account_name" value={form.account_name} onChange={handleChange} style={inputStyle} placeholder="Enter account name" />
-              
               <label style={labelStyle}>Item Name</label>
-              <input name="item_name" value={form.item_name} onChange={handleChange} style={inputStyle} placeholder="What was bought?" />
+              <input name="item_name" value={form.item_name} onChange={handleChange} style={inputStyle} />
               
-              <label style={labelStyle}>Quantity (QTY)</label>
-              {/* Logic: form.qty agar 0 hai to khali rakho placeholder dikhane ke liye */}
-              <input name="qty" type="number" value={form.qty || ""} onChange={handleChange} style={inputStyle} placeholder="0" />
-              
-              <label style={labelStyle}>Reference No. (Invoice #)</label>
-              <input name="reference" value={form.reference} onChange={handleChange} style={inputStyle} placeholder="Invoice #" required />
-
               <div style={{ display: "flex", gap: "10px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Debit (Buy)</label>
-                  {/* Logic: form.debit agar 0 hai to khali rakho placeholder dikhane ke liye */}
-                  <input name="debit" type="number" value={form.debit || ""} onChange={handleChange} style={inputStyle} placeholder="0.00" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Credit (Ret)</label>
-                  {/* Logic: form.credit agar 0 hai to khali rakho placeholder dikhane ke liye */}
-                  <input name="credit" type="number" value={form.credit || ""} onChange={handleChange} style={inputStyle} placeholder="0.00" />
-                </div>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Ref No.</label><input name="reference" value={form.reference} onChange={handleChange} style={inputStyle} placeholder="Optional" /></div>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Qty</label><input name="qty" type="number" value={form.qty || ""} onChange={handleChange} style={inputStyle} /></div>
+              </div>
+              
+              <div style={{ display: "flex", gap: "10px" }}>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Debit (Buy)</label><input name="debit" type="number" value={form.debit || ""} onChange={handleChange} style={inputStyle} /></div>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Credit (Ret)</label><input name="credit" type="number" value={form.credit || ""} onChange={handleChange} style={inputStyle} /></div>
               </div>
 
-              <label style={{ ...labelStyle, color: "#2563eb" }}>Entry Net Balance</label>
-              <div style={{ ...inputStyle, background: "#f0f7ff", border: "1px solid #bcd7ff", fontWeight: "bold" }}>
-                {formatValue(form.balance, formCurrency)}
-              </div>
+              <label style={{ ...labelStyle, color: "#2563eb" }}>Net Balance (This Entry)</label>
+              <input value={formatValue(form.balance, formCurrency)} style={{ ...inputStyle, backgroundColor: "#f0f7ff", fontWeight: "bold" }} disabled />
 
               <button type="submit" style={{ width: "100%", backgroundColor: isEditing ? "#2563eb" : "#000", color: "#fff", padding: "15px", borderRadius: "8px", marginTop: "25px", border: "none", cursor: "pointer", fontWeight: "bold" }}>
-                {isEditing ? "Update Record" : "Save Record"}
+                {isEditing ? "Update Entry" : "Save Entry"}
               </button>
             </form>
           </div>
         </>
       )}
 
-      {/* Selected Group Report Modal */}
+      {/* Ledger Report Modal */}
       {selectedGroupData && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
           <div style={{ backgroundColor: "#fff", width: "950px", maxHeight: "90vh", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            <div style={{ backgroundColor: "#1a5f7a", color: "#fff", padding: "25px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h2 style={{ margin: 0 }}>Reference Report: {selectedGroupData.reference}</h2>
-                <p style={{ margin: "5px 0 0", opacity: 0.9 }}>Vendor: {selectedGroupData.name}</p>
-              </div>
-              <button onClick={() => setSelectedGroupData(null)} style={{ background: "none", border: "none", color: "#fff", fontSize: "24px", cursor: "pointer" }}>&times;</button>
+            <div style={{ backgroundColor: "#1a5f7a", color: "#fff", padding: "25px" }}>
+              <h2 style={{ margin: 0 }}>Vendor Ledger: {selectedGroupData.reference}</h2>
+              <p style={{ margin: "5px 0 0" }}>Vendor: {selectedGroupData.name}</p>
             </div>
             <div style={{ padding: "30px", overflowY: "auto" }}>
                 <div style={{ display: 'none' }}>{modalRunningBal = 0}</div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                   <thead>
                     <tr style={{ textAlign: "left", background: "#f8f9fa" }}>
-                      <th style={{ padding: "12px", borderBottom: "2px solid #dee2e6" }}>Date</th>
-                      <th style={{ padding: "12px", borderBottom: "2px solid #dee2e6" }}>Account</th>
-                      <th style={{ padding: "12px", borderBottom: "2px solid #dee2e6" }}>Item Name</th>
-                      <th style={{ padding: "12px", borderBottom: "2px solid #dee2e6" }}>Qty</th>
-                      <th style={{ padding: "12px", borderBottom: "2px solid #dee2e6" }}>Debit (Buy)</th>
-                      <th style={{ padding: "12px", borderBottom: "2px solid #dee2e6" }}>Credit (Ret)</th>
-                      <th style={{ padding: "12px", borderBottom: "2px solid #dee2e6" }}>Running Bal</th>
+                      <th style={{ padding: "10px" }}>Date</th>
+                      <th style={{ padding: "10px" }}>Account</th>
+                      <th style={{ padding: "10px" }}>Item Name</th>
+                      <th style={{ padding: "10px" }}>Qty</th>
+                      <th style={{ padding: "10px" }}>Debit</th>
+                      <th style={{ padding: "10px" }}>Credit</th>
+                      <th style={{ padding: "10px" }}>Running Bal</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedGroupData.history.map((h, i) => {
-                      modalRunningBal += (Number(h.debit) || 0) - (Number(h.credit) || 0);
+                    {selectedGroupData.history.map(item => {
+                      modalRunningBal += (Number(item.debit) || 0) - (Number(item.credit) || 0);
                       return (
-                        <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
-                          <td style={{ padding: "12px" }}>{h.date}</td>
-                          <td style={{ padding: "12px" }}>{h.account_name || "—"}</td>
-                          <td style={{ padding: "12px" }}>{h.item_name}</td>
-                          <td style={{ padding: "12px" }}>{h.qty}</td>
-                          <td style={{ padding: "12px", color: "#e03131", fontWeight: "bold" }}>{formatValue(h.debit, h.currency)}</td>
-                          <td style={{ padding: "12px", color: "#0ca678", fontWeight: "bold" }}>{formatValue(h.credit, h.currency)}</td>
-                          <td style={{ padding: "12px", fontWeight: "bold" }}>{formatValue(modalRunningBal, h.currency)}</td>
+                        <tr key={item.id} style={{ borderBottom: "1px solid #eee" }}>
+                          <td style={{ padding: "10px" }}>{item.date}</td>
+                          <td style={{ padding: "10px" }}>{item.account_name}</td>
+                          <td style={{ padding: "10px" }}>{item.item_name}</td>
+                          <td style={{ padding: "10px" }}>{item.qty || "0"}</td>
+                          <td style={{ padding: "10px", color: "#e03131" }}>{formatValue(item.debit, item.currency)}</td>
+                          <td style={{ padding: "10px", color: "#0ca678" }}>{formatValue(item.credit, item.currency)}</td>
+                          <td style={{ padding: "10px", fontWeight: "bold" }}>{formatValue(modalRunningBal, item.currency)}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
+                
+                {/* Total Net Balance Card */}
+                <div style={{ background: "#f8f9fa", padding: "15px", marginTop: "20px", borderRadius: "8px", border: "1px solid #eee", textAlign: 'right' }}>
+                    <span style={{ fontSize: "14px", color: "#6b7280", marginRight: "8px" }}>total net balance:</span>
+                    <span style={{ fontSize: "16px", color: "#1a5f7a", fontWeight: "bold" }}>
+                        {formatValue(selectedGroupData.netBalance, selectedGroupData.currency)}
+                    </span>
+                </div>
+
+                <button onClick={() => setSelectedGroupData(null)} style={{ width: "100%", padding: "12px", backgroundColor: "#1a5f7a", color: "#fff", border: "none", borderRadius: "8px", marginTop: "20px", cursor: "pointer", fontWeight: 'bold' }}>Close Report</button>
             </div>
           </div>
         </div>

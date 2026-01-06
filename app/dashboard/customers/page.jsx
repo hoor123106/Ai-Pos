@@ -34,7 +34,6 @@ export default function Customers() {
   const [form, setForm] = useState(initialFormState);
   const currencySymbols = { USD: "$", PKR: "Rs", AED: "Dh" };
 
-  // Fetch Data from Dexie
   const fetchCustomers = async () => {
     setLoading(true);
     try {
@@ -49,28 +48,34 @@ export default function Customers() {
 
   useEffect(() => { fetchCustomers(); }, []);
 
-  // Global Totals
+  const uniqueAccountNames = Array.from(new Set(rows.map(r => r.account_name).filter(Boolean)));
+
   const totalDebitAll = rows.reduce((acc, curr) => acc + (Number(curr.debit) || 0), 0);
   const totalCreditAll = rows.reduce((acc, curr) => acc + (Number(curr.credit) || 0), 0);
   const netBalanceAll = totalDebitAll - totalCreditAll;
 
-  // Invoice/Group Report Logic
-  const handleCustomerClick = (refNo, fallbackName) => {
-    const history = rows
-      .filter(r => refNo ? r.reference === refNo : r.customer_name === fallbackName)
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  // UPDATED LOGIC: Ab ye Reference na hone par Name par filter karega
+  const handleCustomerClick = (refNo, custName) => {
+    let history = [];
+    
+    if (refNo && refNo !== "—" && refNo !== "") {
+        // Agar Reference No hai to sirf wohi entries dikhao
+        history = rows.filter(r => r.reference === refNo);
+    } else {
+        // Agar Reference No NAHI hai to us Customer ki saari khali reference wali entries dikhao
+        history = rows.filter(r => r.customer_name === custName && (!r.reference || r.reference === "—" || r.reference === ""));
+    }
+
+    history = history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const totalDebit = history.reduce((sum, r) => sum + (Number(r.debit) || 0), 0);
     const totalCredit = history.reduce((sum, r) => sum + (Number(r.credit) || 0), 0);
     const netBalance = totalDebit - totalCredit;
 
     setSelectedGroupData({
-      reference: refNo || "N/A",
-      name: fallbackName,
+      reference: (refNo && refNo !== "—") ? refNo : "No Reference No.",
+      name: custName || "N/A",
       history,
-      totalDebit,
-      totalCredit,
-      trialBalance: netBalance === 0 ? "Balanced ✅" : "Unbalanced ⚠️",
       netBalance: netBalance,
       currency: history[0]?.currency || "USD"
     });
@@ -163,7 +168,6 @@ export default function Customers() {
         </button>
       </div>
 
-      {/* Summary Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "30px" }}>
         <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
           <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL DEBIT</span>
@@ -179,7 +183,6 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Main Table */}
       <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #e5e7eb", overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1300px" }}>
           <thead style={{ backgroundColor: "#fafafa" }}>
@@ -214,10 +217,10 @@ export default function Customers() {
                 <td style={{ padding: "15px", color: "#e03131", fontWeight: "bold" }}>{formatValue(row.credit, row.currency)}</td>
                 <td style={{ padding: "15px", fontWeight: "bold" }}>{formatValue(row.balance, row.currency)}</td>
                 <td style={{ padding: "15px", display: "flex", gap: "10px", justifyContent: "center", alignItems: "center" }}>
-                  <button onClick={() => handleEdit(row)} style={{ color: "#2563eb", border: "none", background: "none", cursor: "pointer" }} title="Edit">
+                  <button onClick={() => handleEdit(row)} style={{ color: "#2563eb", border: "none", background: "none", cursor: "pointer" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </button>
-                  <button onClick={() => deleteCustomer(row.id)} style={{ color: "#ff4d4f", border: "none", background: "none", cursor: "pointer" }} title="Delete">
+                  <button onClick={() => deleteCustomer(row.id)} style={{ color: "#ff4d4f", border: "none", background: "none", cursor: "pointer" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
                 </td>
@@ -227,7 +230,6 @@ export default function Customers() {
         </table>
       </div>
 
-      {/* Entry Popup Form */}
       {showForm && (
         <>
           <div onClick={closeForm} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.2)", zIndex: 998 }} />
@@ -236,7 +238,6 @@ export default function Customers() {
                 <h2 style={{ margin: 0 }}>{editingId ? "Edit Entry" : "Add New Entry"}</h2>
                 <button onClick={closeForm} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
             </div>
-            
             <form onSubmit={saveCustomer}>
               <div style={{ padding: "15px", background: "#f8f9fa", borderRadius: "10px", border: "1px solid #eee", marginBottom: "20px" }}>
                 <label style={{ fontSize: "13px", fontWeight: "bold" }}>Currency & Exchange</label>
@@ -251,47 +252,34 @@ export default function Customers() {
                 </div>
               </div>
 
-              <label style={labelStyle}>Customer Name</label>
-              <input name="customer_name" value={form.customer_name} onChange={handleChange} style={inputStyle} placeholder="Optional" />
-
               <label style={labelStyle}>Account Name</label>
-              <input name="account_name" value={form.account_name} onChange={handleChange} style={inputStyle} placeholder="Optional" />
+              <input name="account_name" value={form.account_name} onChange={handleChange} style={inputStyle} list="accounts-list" />
+              <datalist id="accounts-list">
+                <option value="Cash in Hand" /><option value="Bank Account" />
+                {uniqueAccountNames.map((name, index) => (<option key={index} value={name} />))}
+              </datalist>
+
+              <label style={labelStyle}>Customer Name</label>
+              <input name="customer_name" value={form.customer_name} onChange={handleChange} style={inputStyle} required />
 
               <label style={labelStyle}>Date</label>
               <input name="date" type="date" value={form.date} onChange={handleChange} style={inputStyle} />
               
               <label style={labelStyle}>Item Name</label>
-              <textarea name="description" value={form.description} onChange={handleChange} style={{ ...inputStyle, height: "60px" }} placeholder="Enter item details..." />
+              <textarea name="description" value={form.description} onChange={handleChange} style={{ ...inputStyle, height: "60px" }} />
               
               <div style={{ display: "flex", gap: "10px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Reference No.</label>
-                  <input name="reference" value={form.reference} onChange={handleChange} style={inputStyle} placeholder="INV-001" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Qty</label>
-                  <input name="qty" type="number" value={form.qty === 0 ? "" : form.qty} onChange={handleChange} style={inputStyle} placeholder="0" />
-                </div>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Reference No.</label><input name="reference" value={form.reference} onChange={handleChange} style={inputStyle} placeholder="Optional" /></div>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Qty</label><input name="qty" type="number" value={form.qty === 0 ? "" : form.qty} onChange={handleChange} style={inputStyle} /></div>
               </div>
               
               <div style={{ display: "flex", gap: "10px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Debit</label>
-                  <input name="debit" type="number" value={form.debit === 0 ? "" : form.debit} onChange={handleChange} style={inputStyle} placeholder="0.00" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Credit</label>
-                  <input name="credit" type="number" value={form.credit === 0 ? "" : form.credit} onChange={handleChange} style={inputStyle} placeholder="0.00" />
-                </div>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Debit</label><input name="debit" type="number" value={form.debit === 0 ? "" : form.debit} onChange={handleChange} style={inputStyle} /></div>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Credit</label><input name="credit" type="number" value={form.credit === 0 ? "" : form.credit} onChange={handleChange} style={inputStyle} /></div>
               </div>
 
               <label style={{ ...labelStyle, color: "#2563eb" }}>Net Balance (Current Entry)</label>
-              <input 
-                name="balance" 
-                value={formatValue(form.balance, formCurrency)} 
-                style={{ ...inputStyle, backgroundColor: "#f0f7ff", fontWeight: "bold", border: "1px solid #2563eb", color: form.balance >= 0 ? "#0ca678" : "#e03131" }} 
-                disabled 
-              />
+              <input value={formatValue(form.balance, formCurrency)} style={{ ...inputStyle, backgroundColor: "#f0f7ff", fontWeight: "bold" }} disabled />
 
               <button type="submit" style={{ width: "100%", backgroundColor: editingId ? "#2563eb" : "#000", color: "#fff", padding: "15px", borderRadius: "8px", marginTop: "25px", border: "none", cursor: "pointer", fontWeight: "bold" }}>
                 {editingId ? "Update Entry" : "Save Entry"}
@@ -301,12 +289,11 @@ export default function Customers() {
         </>
       )}
 
-      {/* Invoice Report Modal */}
       {selectedGroupData && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
           <div style={{ backgroundColor: "#fff", width: "950px", maxHeight: "90vh", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <div style={{ backgroundColor: "#1a5f7a", color: "#fff", padding: "25px" }}>
-              <h2 style={{ margin: 0 }}>Reference Report: {selectedGroupData.reference}</h2>
+              <h2 style={{ margin: 0 }}>Ledger: {selectedGroupData.reference}</h2>
               <p style={{ margin: "5px 0 0" }}>Customer: {selectedGroupData.name}</p>
             </div>
             <div style={{ padding: "30px", overflowY: "auto" }}>
@@ -340,15 +327,22 @@ export default function Customers() {
                     })}
                   </tbody>
                 </table>
-                <div style={{ background: "#f8f9fa", padding: "15px", marginTop: "20px", borderRadius: "8px", border: "1px solid #eee" }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span>Total Debit (Ref): <b>{formatValue(selectedGroupData.totalDebit, selectedGroupData.currency)}</b></span>
-                        <span>Total Credit (Ref): <b>{formatValue(selectedGroupData.totalCredit, selectedGroupData.currency)}</b></span>
-                    </div>
-                    <p style={{ margin: "5px 0" }}>Trial Balance Status: <b style={{ color: selectedGroupData.trialBalance.includes('✅') ? 'green' : 'red' }}>{selectedGroupData.trialBalance}</b></p>
-                    <p style={{ margin: "5px 0", fontSize: "16px" }}>Net Outstanding: <b>{formatValue(selectedGroupData.netBalance, selectedGroupData.currency)}</b></p>
+                <div style={{ 
+                    background: "#f8f9fa", 
+                    padding: "15px", 
+                    marginTop: "20px", 
+                    borderRadius: "8px", 
+                    border: "1px solid #eee", 
+                    textAlign: 'right' 
+                }}>
+                    <span style={{ fontSize: "14px", color: "#6b7280", marginRight: "8px", fontWeight: "normal" }}>
+                        total net balance:
+                    </span>
+                    <span style={{ fontSize: "16px", color: "#1a5f7a", fontWeight: "500" }}>
+                        {formatValue(selectedGroupData.netBalance, selectedGroupData.currency)}
+                    </span>
                 </div>
-                <button onClick={() => setSelectedGroupData(null)} style={{ width: "100%", padding: "12px", backgroundColor: "#1a5f7a", color: "#fff", border: "none", borderRadius: "8px", marginTop: "20px", cursor: "pointer" }}>Close Report</button>
+                <button onClick={() => setSelectedGroupData(null)} style={{ width: "100%", padding: "12px", backgroundColor: "#1a5f7a", color: "#fff", border: "none", borderRadius: "8px", marginTop: "20px", cursor: "pointer", fontWeight: 'bold' }}>Close Report</button>
             </div>
           </div>
         </div>

@@ -17,14 +17,12 @@ export default function Sidebar() {
       cls: styles.dashboard,
     },
     {
-      name: "vendors",
+      name: "Vendors",
       href: "/dashboard/vendors",
       icon: "/images/point-of-sale-icon.png",
       activeIcon: "/images/point-of-saleWhite.png",
       cls: styles.pointOfSale,
     },
- 
-
     {
       name: "Customers",
       href: "/dashboard/customers",
@@ -32,35 +30,38 @@ export default function Sidebar() {
       activeIcon: "/images/communityWhite.png",
       cls: styles.customers,
     },
-       {
+    // --- Naye Pages Yahan Add Kiye Hain ---
+   
+
+    // ------------------------------------
+    {
       name: "Quick Notes",
       href: "/dashboard/quicknotes",
       icon: "/images/customers-icon.png",
       activeIcon: "/images/communityWhite.png",
       cls: styles.customers,
     },
-      {
+     {
+      name: "Inventories",
+      href: "/dashboard/inventories",
+      icon: "/images/customers-icon.png", // Aap apne pasand ka icon path de sakte hain
+      activeIcon: "/images/communityWhite.png",
+      cls: styles.customers,
+    },
+        {
+      name: "Stock",
+      href: "/dashboard/stock",
+      icon: "/images/point-of-sale-icon.png", // Aap apne pasand ka icon path de sakte hain
+      activeIcon: "/images/point-of-saleWhite.png",
+      cls: styles.pointOfSale,
+    },
+    {
       name: "Settings",
       href: "/dashboard/setting-pos",
       icon: "/images/setting-icon.png",
       activeIcon: "/images/settingswhite.png",
       cls: styles.customers,
     },
- 
-    // {
-    //   name: "Inventory",
-    //   href: "/dashboard/inventory",
-    //   icon: "/images/customers-icon.png",
-    //   activeIcon: "/images/communityWhite.png",
-    //   cls: styles.customers,
-    // },
-    // {
-    //   name: "Setting",
-    //   href: "/dashboard/setting-pos",
-    //   // icon: "/images/setting-icon.png",
-    //   // activeIcon: "/images/analyticsWhite.png",
-    //   cls: styles.setting,
-    // },
   ];
 
   return (
