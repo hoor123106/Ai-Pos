@@ -4,13 +4,6 @@ import React, { useState, useEffect } from "react";
 import styles from "./dashboardCards.module.css";
 import Dexie from "dexie";
 
-// Dono Databases ko yahan access karenge
-const customerDB = new Dexie("CustomerDB");
-customerDB.version(1).stores({ customer_records: "++id" });
-
-const vendorDB = new Dexie("VendorDB");
-vendorDB.version(2).stores({ vendor_records: "++id" });
-
 const Card = ({ title, value, percent, icon, trend }) => {
   return (
     <div className={styles.dashboardCard}>
@@ -37,7 +30,18 @@ export default function DashboardCards() {
 
   const fetchLocalCounts = async () => {
     try {
-      // Local Dexie DB se counts nikalna
+      // 1. Browser storage se user ki email check karein
+      const userEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") || "Guest" : "Guest";
+
+      // 2. Wahi database connect karein jo Vendors/Customers page par hai
+      // Yaad rakhein: Ye name wahi hona chahiye jo baki files mein hai
+      const customerDB = new Dexie(`CustomerDB_${userEmail}`);
+      customerDB.version(1).stores({ customer_records: "++id" });
+
+      const vendorDB = new Dexie(`VendorDB_${userEmail}`);
+      vendorDB.version(1).stores({ vendor_records: "++id" });
+
+      // 3. Data count karein
       const customerCount = await customerDB.customer_records.count();
       const vendorCount = await vendorDB.vendor_records.count();
 
@@ -45,17 +49,18 @@ export default function DashboardCards() {
         customers: customerCount || 0,
         vendors: vendorCount || 0
       });
+
     } catch (error) {
-      console.error("Error fetching local counts:", error);
+      console.error("Dashboard count error:", error);
     }
   };
 
   useEffect(() => {
-    // Pehli baar load hone par count uthao
+    // Component load hote hi count fetch karein
     fetchLocalCounts();
 
-    // Har 2 second baad check karega agar koi naya data add hua ho (Auto-refresh)
-    const interval = setInterval(fetchLocalCounts, 2000);
+    // Har 3 second baad count refresh karein (Auto-sync)
+    const interval = setInterval(fetchLocalCounts, 3000);
 
     return () => clearInterval(interval);
   }, []);
@@ -65,7 +70,7 @@ export default function DashboardCards() {
       <Card
         title="Total Customers"
         value={counts.customers}
-        percent="Local"
+        percent="Live"
         trend="up"
         icon="/images/community.png"
       />
@@ -73,7 +78,7 @@ export default function DashboardCards() {
       <Card
         title="Total Vendors"
         value={counts.vendors}
-        percent="Local"
+        percent="Live"
         trend="up"
         icon="/images/productsBlue.png"
       />
