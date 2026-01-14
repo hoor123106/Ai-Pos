@@ -1,24 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Dexie from "dexie";
 
-// Database Setup - VendorDB
-const db = new Dexie("VendorDB");
-db.version(1).stores({
-  vendor_records: "++id, date, vendor_name, account_name, currency, description, memo"
-});
-
 export default function Vendors() {
+  // --- DATABASE LOGIC START ---
+  const db = useMemo(() => {
+    let userEmail = "Guest";
+    if (typeof window !== "undefined") {
+      userEmail = localStorage.getItem("userEmail") || "Guest";
+    }
+    const dexieDb = new Dexie(`VendorDB_${userEmail}`);
+    dexieDb.version(1).stores({
+      vendor_records: "++id, date, vendor_name, account_name, currency, description, memo"
+    });
+    return dexieDb;
+  }, []);
+  // --- DATABASE LOGIC END ---
+
   const [showForm, setShowForm] = useState(false);
   const [selectedGroupData, setSelectedGroupData] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
-  
-  // Modal ke andar wala filter state
   const [modalFilterDate, setModalFilterDate] = useState("");
-
   const [exchangeRates, setExchangeRates] = useState({ USD: 1, PKR: 280, AED: 3.67 });
   const [formCurrency, setFormCurrency] = useState("USD");
 
@@ -49,7 +54,7 @@ export default function Vendors() {
     }
   };
 
-  useEffect(() => { fetchVendors(); }, []);
+  useEffect(() => { fetchVendors(); }, [db]);
 
   const getGroupedSummary = () => {
     const summaryMap = {};
@@ -59,7 +64,6 @@ export default function Vendors() {
         const vendorHistory = rows.filter(r => r.vendor_name === name);
         const totalD = vendorHistory.reduce((s, r) => s + (Number(r.debit) || 0), 0);
         const totalC = vendorHistory.reduce((s, r) => s + (Number(r.credit) || 0), 0);
-        
         summaryMap[name] = { 
           ...row, 
           vendorTotalBalance: totalD - totalC 
@@ -77,11 +81,9 @@ export default function Vendors() {
   const handleVendorClick = (vendName) => {
     let history = rows.filter(r => r.vendor_name === vendName);
     history = history.sort((a, b) => new Date(a.date) - new Date(b.date));
-
     const totalDebit = history.reduce((sum, r) => sum + (Number(r.debit) || 0), 0);
     const totalCredit = history.reduce((sum, r) => sum + (Number(r.credit) || 0), 0);
     const netBalance = totalDebit - totalCredit;
-
     setModalFilterDate(""); 
     setSelectedGroupData({
       name: vendName || "N/A",
@@ -105,7 +107,6 @@ export default function Vendors() {
     setForm((prev) => {
       const updatedValue = type === "number" ? (value === "" ? 0 : parseFloat(value)) : value;
       const updated = { ...prev, [name]: updatedValue };
-
       if (name === "debit" || name === "credit") {
         const d = name === "debit" ? (parseFloat(value) || 0) : (prev.debit || 0);
         const c = name === "credit" ? (parseFloat(value) || 0) : (prev.credit || 0);
@@ -115,17 +116,12 @@ export default function Vendors() {
     });
   };
 
-  // FIXED: Logic to handle edit from both Main Table and Ledger Modal
   const handleEdit = (row) => {
     setEditingId(row.id);
     setForm({ ...row });
     setFormCurrency(row.currency || "USD");
     setShowForm(true);
-    
-    // Sirf tab modal band karein agar wo khula hua ho
-    if (selectedGroupData) {
-      setSelectedGroupData(null);
-    }
+    if (selectedGroupData) setSelectedGroupData(null);
   };
 
   const closeForm = () => {
@@ -166,9 +162,7 @@ export default function Vendors() {
     if (!confirm("Are you sure?")) return;
     await db.vendor_records.delete(id);
     fetchVendors();
-    if (selectedGroupData) {
-      setSelectedGroupData(null);
-    }
+    if (selectedGroupData) setSelectedGroupData(null);
   };
 
   const inputStyle = { width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px", marginTop: "5px", boxSizing: "border-box" };
@@ -185,7 +179,6 @@ export default function Vendors() {
         </button>
       </div>
 
-      {/* Stats Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "30px" }}>
         <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
           <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL DEBIT</span>
@@ -201,7 +194,6 @@ export default function Vendors() {
         </div>
       </div>
 
-      {/* Main Table */}
       <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #e5e7eb", overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1100px" }}>
           <thead style={{ backgroundColor: "#fafafa" }}>
@@ -242,7 +234,6 @@ export default function Vendors() {
         </table>
       </div>
 
-      {/* Entry Form Modal */}
       {showForm && (
         <>
           <div onClick={closeForm} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.2)", zIndex: 998 }} />
@@ -296,7 +287,6 @@ export default function Vendors() {
         </>
       )}
 
-      {/* Individual Vendor Ledger Modal */}
       {selectedGroupData && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
           <div style={{ backgroundColor: "#fff", width: "1000px", maxHeight: "92vh", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -307,23 +297,13 @@ export default function Vendors() {
                 <p style={{ margin: "4px 0 0", opacity: 0.9 }}>Vendor: {selectedGroupData.name}</p>
               </div>
               
-              {/* Calendar Filter: Black Background & White Text */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#000', padding: '8px 15px', borderRadius: '10px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 'bold', color: "#fff" }}>FILTER DATE:</label>
                 <input 
                   type="date" 
                   value={modalFilterDate}
                   onChange={(e) => setModalFilterDate(e.target.value)}
-                  style={{ 
-                    padding: '6px', 
-                    borderRadius: '6px', 
-                    border: 'none', 
-                    outline: 'none', 
-                    cursor: 'pointer', 
-                    fontSize: "13px",
-                    background: "#fff",
-                    color: "#000"
-                  }}
+                  style={{ padding: '6px', borderRadius: '6px', border: 'none', outline: 'none', cursor: 'pointer', fontSize: "13px", background: "#fff", color: "#000" }}
                 />
                 {modalFilterDate && (
                   <button onClick={() => setModalFilterDate("")} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontSize: '11px', fontWeight: "bold" }}>Clear</button>
@@ -371,15 +351,13 @@ export default function Vendors() {
                             </td>
                           </tr>
                         );
-                    })}
+                      })}
                   </tbody>
                 </table>
-
                 <div style={{ background: "#f8f9fa", padding: "18px 25px", marginTop: "25px", borderRadius: "12px", border: "1px solid #edf2f7", textAlign: 'right' }}>
                     <span style={{ fontSize: "14px", color: "#64748b", marginRight: "10px" }}>Net Total for {selectedGroupData.name}:</span>
                     <span style={{ fontSize: "18px", color: "#1e3a8a", fontWeight: "bold" }}>{formatValue(selectedGroupData.netBalance, selectedGroupData.currency).text}</span>
                 </div>
-
                 <button onClick={() => setSelectedGroupData(null)} style={{ width: "100%", padding: "14px", backgroundColor: "#1e3a8a", color: "#fff", border: "none", borderRadius: "12px", marginTop: "25px", cursor: "pointer", fontWeight: 'bold' }}>Close Ledger</button>
             </div>
           </div>

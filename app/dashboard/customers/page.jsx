@@ -1,24 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Dexie from "dexie";
 
-// Database Setup - CustomerDB
-const db = new Dexie("CustomerDB");
-db.version(1).stores({
-  customer_records: "++id, date, customer_name, account_name, currency, description, memo"
-});
-
 export default function Customers() {
+  // --- DATABASE LOGIC START ---
+  const db = useMemo(() => {
+    let userEmail = "Guest";
+    if (typeof window !== "undefined") {
+      userEmail = localStorage.getItem("userEmail") || "Guest";
+    }
+    // Har email ke liye alag database name
+    const dexieDb = new Dexie(`CustomerDB_${userEmail}`);
+    dexieDb.version(1).stores({
+      customer_records: "++id, date, customer_name, account_name, currency, description, memo"
+    });
+    return dexieDb;
+  }, []);
+  // --- DATABASE LOGIC END ---
+
   const [showForm, setShowForm] = useState(false);
   const [selectedGroupData, setSelectedGroupData] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
-  
-  // Modal ke andar wala filter state
   const [modalFilterDate, setModalFilterDate] = useState("");
-
   const [exchangeRates, setExchangeRates] = useState({ USD: 1, PKR: 280, AED: 3.67 });
   const [formCurrency, setFormCurrency] = useState("USD");
 
@@ -49,7 +55,7 @@ export default function Customers() {
     }
   };
 
-  useEffect(() => { fetchCustomers(); }, []);
+  useEffect(() => { fetchCustomers(); }, [db]);
 
   const getGroupedSummary = () => {
     const summaryMap = {};
@@ -59,7 +65,6 @@ export default function Customers() {
         const customerHistory = rows.filter(r => r.customer_name === name);
         const totalD = customerHistory.reduce((s, r) => s + (Number(r.debit) || 0), 0);
         const totalC = customerHistory.reduce((s, r) => s + (Number(r.credit) || 0), 0);
-        
         summaryMap[name] = { 
           ...row, 
           customerTotalBalance: totalD - totalC 
@@ -77,11 +82,9 @@ export default function Customers() {
   const handleCustomerClick = (custName) => {
     let history = rows.filter(r => r.customer_name === custName);
     history = history.sort((a, b) => new Date(a.date) - new Date(b.date));
-
     const totalDebit = history.reduce((sum, r) => sum + (Number(r.debit) || 0), 0);
     const totalCredit = history.reduce((sum, r) => sum + (Number(r.credit) || 0), 0);
     const netBalance = totalDebit - totalCredit;
-
     setModalFilterDate(""); 
     setSelectedGroupData({
       name: custName || "N/A",
@@ -105,7 +108,6 @@ export default function Customers() {
     setForm((prev) => {
       const updatedValue = type === "number" ? (value === "" ? 0 : parseFloat(value)) : value;
       const updated = { ...prev, [name]: updatedValue };
-
       if (name === "debit" || name === "credit") {
         const d = name === "debit" ? (parseFloat(value) || 0) : (prev.debit || 0);
         const c = name === "credit" ? (parseFloat(value) || 0) : (prev.credit || 0);
@@ -115,16 +117,12 @@ export default function Customers() {
     });
   };
 
-  // FIXED: Logic to handle edit correctly from both places
   const handleEdit = (row) => {
     setEditingId(row.id);
     setForm({ ...row });
     setFormCurrency(row.currency || "USD");
     setShowForm(true);
-    
-    if (selectedGroupData) {
-      setSelectedGroupData(null);
-    }
+    if (selectedGroupData) setSelectedGroupData(null);
   };
 
   const closeForm = () => {
@@ -165,9 +163,7 @@ export default function Customers() {
     if (!confirm("Are you sure?")) return;
     await db.customer_records.delete(id);
     fetchCustomers();
-    if (selectedGroupData) {
-      setSelectedGroupData(null);
-    }
+    if (selectedGroupData) setSelectedGroupData(null);
   };
 
   const inputStyle = { width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px", marginTop: "5px", boxSizing: "border-box" };
@@ -358,7 +354,7 @@ export default function Customers() {
                             </td>
                           </tr>
                         );
-                    })}
+                      })}
                   </tbody>
                 </table>
                 <div style={{ background: "#f8f9fa", padding: "18px 25px", marginTop: "25px", borderRadius: "12px", border: "1px solid #edf2f7", textAlign: 'right' }}>
