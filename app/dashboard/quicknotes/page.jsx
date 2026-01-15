@@ -10,11 +10,12 @@ export default function QuickNotes() {
   const [currentId, setCurrentId] = useState(null);
   const [selectedLedger, setSelectedLedger] = useState(null);
 
+  // --- CURRENCY LOGIC ---
   const [exchangeRates, setExchangeRates] = useState({ USD: 1, PKR: 280, AED: 3.67 });
   const [formCurrency, setFormCurrency] = useState("USD");
   const currencySymbols = { USD: "$", PKR: "Rs", AED: "Dh" };
 
-  // --- DATABASE SETUP (Email-Specific) ---
+  // --- DATABASE SETUP ---
   const userEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") || "Guest" : "Guest";
 
   const openDB = () => {
@@ -52,19 +53,15 @@ export default function QuickNotes() {
 
   useEffect(() => { loadData(); }, [userEmail]);
 
-  // --- STATE AND CALCULATION (Corrected Order) ---
   const [form, setForm] = useState({
     entry_date: new Date().toISOString().split("T")[0],
     name: "",
+    account_name: "CASH IN HAND",
     item_name: "",
-    ref_no: "",
     debit: "", 
     credit: "",
-    currency: "USD",
+    balance: 0
   });
-
-  // Ab 'form' pehle ban chuka hai, toh entryBalance error nahi dega
-  const entryBalance = (Number(form.credit) || 0) - (Number(form.debit) || 0);
 
   const formatValue = (val, rowCurrency) => {
     const symbol = currencySymbols[rowCurrency || "USD"] || "";
@@ -79,7 +76,6 @@ export default function QuickNotes() {
       ...prev,
       debit: prev.debit !== "" ? (Number(prev.debit) * factor).toFixed(2) : "",
       credit: prev.credit !== "" ? (Number(prev.credit) * factor).toFixed(2) : "",
-      currency: newCurr
     }));
     setFormCurrency(newCurr);
   };
@@ -109,11 +105,11 @@ export default function QuickNotes() {
     setForm({
       entry_date: new Date().toISOString().split("T")[0],
       name: "",
+      account_name: "CASH IN HAND",
       item_name: "",
-      ref_no: "",
       debit: "", 
       credit: "",
-      currency: "USD",
+      balance: 0
     });
     setFormCurrency("USD");
     setIsEditing(false);
@@ -131,9 +127,14 @@ export default function QuickNotes() {
       return { ...item, ledger_bal: tempBal };
     });
 
+    const totalD = history.reduce((s, r) => s + (Number(r.debit) || 0), 0);
+    const totalC = history.reduce((s, r) => s + (Number(r.credit) || 0), 0);
+
     setSelectedLedger({
       name,
       history: historyWithRunningBal.reverse(),
+      totalDebit: totalD,
+      totalCredit: totalC,
       totalBal: tempBal,
       currency: history[0]?.currency || "USD"
     });
@@ -147,6 +148,7 @@ export default function QuickNotes() {
     return Array.from(latestMap.values()).reverse();
   };
 
+  const entryBalance = (Number(form.credit) || 0) - (Number(form.debit) || 0);
   const totalDebit = entries.reduce((acc, curr) => acc + (Number(curr.debit) || 0), 0);
   const totalCredit = entries.reduce((acc, curr) => acc + (Number(curr.credit) || 0), 0);
 
@@ -185,6 +187,7 @@ export default function QuickNotes() {
               <tr>
                 <th>Date</th>
                 <th>Name</th>
+                <th>Account</th>
                 <th>Item</th>
                 <th>Debit</th>
                 <th>Credit</th>
@@ -197,12 +200,19 @@ export default function QuickNotes() {
                 <tr key={item.id} className={styles.tableRow}>
                   <td>{item.entry_date}</td>
                   <td onClick={() => handleNameClick(item.name)} className={styles.clickableName}>{item.name}</td>
+                  <td>{item.account_name}</td>
                   <td>{item.item_name || "-"}</td>
                   <td className={styles.debitText}>{item.debit > 0 ? formatValue(item.debit, item.currency) : "-"}</td>
                   <td className={styles.creditText}>{item.credit > 0 ? formatValue(item.credit, item.currency) : "-"}</td>
                   <td className={styles.boldText}>{formatValue(item.running_balance, item.currency)}</td>
                   <td>
-                    <button onClick={() => { setIsEditing(true); setCurrentId(item.id); setForm(item); setFormCurrency(item.currency || "USD"); setShowModal(true); }} className={styles.editBtn}>Edit</button>
+                    <button onClick={() => { 
+                        setIsEditing(true); 
+                        setCurrentId(item.id); 
+                        setForm(item); 
+                        setFormCurrency(item.currency || "USD"); 
+                        setShowModal(true); 
+                    }} className={styles.editBtn}>Edit</button>
                   </td>
                 </tr>
               ))}
@@ -211,19 +221,39 @@ export default function QuickNotes() {
         </div>
       </div>
 
-      {/* Forms and Ledger Modals (Same logic as before) */}
+      {/* --- NEW DESIGN FULL LEDGER MODAL --- */}
       {selectedLedger && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalContent} style={{ maxWidth: "1100px", width: "95%" }}>
-            <div className={styles.modalHeader}>
-              <h2>Full Ledger: {selectedLedger.name}</h2>
+          <div className={styles.ledgerModalContent}>
+            <div className={styles.ledgerModalHeader}>
+              <div>
+                <h2 style={{ margin: 0 }}>Statement of Account</h2>
+                <p style={{ margin: "5px 0 0", opacity: 0.8 }}>Party Name: <strong>{selectedLedger.name}</strong></p>
+              </div>
               <button onClick={() => setSelectedLedger(null)} className={styles.closeBtn}>&times;</button>
             </div>
-            <div className={styles.modalScroll}>
+
+            <div className={styles.ledgerStatsRow}>
+                <div className={styles.miniStat}>
+                    <span>Total Debit</span>
+                    <strong style={{color: '#ef4444'}}>{formatValue(selectedLedger.totalDebit, selectedLedger.currency)}</strong>
+                </div>
+                <div className={styles.miniStat}>
+                    <span>Total Credit</span>
+                    <strong style={{color: '#10b981'}}>{formatValue(selectedLedger.totalCredit, selectedLedger.currency)}</strong>
+                </div>
+                <div className={styles.miniStat}>
+                    <span>Net Balance</span>
+                    <strong style={{color: '#1e40af'}}>{formatValue(selectedLedger.totalBal, selectedLedger.currency)}</strong>
+                </div>
+            </div>
+
+            <div className={styles.ledgerScrollArea}>
               <table className={styles.ledgerTable}>
-                <thead>
+                <thead className={styles.stickyHeader}>
                   <tr>
                     <th>Date</th>
+                    <th>Account</th>
                     <th>Item</th>
                     <th>Debit</th>
                     <th>Credit</th>
@@ -234,19 +264,25 @@ export default function QuickNotes() {
                   {selectedLedger.history.map(item => (
                     <tr key={item.id} className={styles.tableRow}>
                       <td>{item.entry_date}</td>
-                      <td>{item.item_name || "-"}</td>
-                      <td className={styles.debitText}>{item.debit > 0 ? formatValue(item.debit, item.currency) : "-"}</td>
-                      <td className={styles.creditText}>{item.credit > 0 ? formatValue(item.credit, item.currency) : "-"}</td>
+                      <td style={{fontSize: '12px', fontWeight: 'bold'}}>{item.account_name}</td>
+                      <td style={{color: '#6b7280'}}>{item.item_name || "No description"}</td>
+                      <td className={styles.debitText}>{item.debit > 0 ? formatValue(item.debit, item.currency) : "—"}</td>
+                      <td className={styles.creditText}>{item.credit > 0 ? formatValue(item.credit, item.currency) : "—"}</td>
                       <td className={styles.boldText}>{formatValue(item.ledger_bal, item.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            
+            <div className={styles.ledgerFooter}>
+                <button onClick={() => setSelectedLedger(null)} className={styles.closeLedgerBtn}>Close Statement</button>
+            </div>
           </div>
         </div>
       )}
 
+      {/* FORM MODAL */}
       {showModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
@@ -256,12 +292,22 @@ export default function QuickNotes() {
             </div>
             <form onSubmit={handleSave}>
               <div className={styles.currencyBox}>
-                <label className={styles.fieldLabel}>Currency</label>
+                <label className={styles.fieldLabel} style={{marginTop: 0}}>Currency & Exchange</label>
                 <select className={styles.inputField} value={formCurrency} onChange={(e) => handleCurrencyChange(e.target.value)}>
                   <option value="USD">USD ($)</option>
                   <option value="PKR">PKR (Rs)</option>
                   <option value="AED">AED (Dh)</option>
                 </select>
+                <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: "10px", fontWeight: "bold" }}>PKR Rate</label>
+                    <input type="number" value={exchangeRates.PKR} onChange={(e) => handleManualRateChange("PKR", e.target.value)} className={styles.miniInput} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: "10px", fontWeight: "bold" }}>AED Rate</label>
+                    <input type="number" value={exchangeRates.AED} onChange={(e) => handleManualRateChange("AED", e.target.value)} className={styles.miniInput} />
+                  </div>
+                </div>
               </div>
 
               <label className={styles.fieldLabel}>Date</label>
@@ -269,6 +315,16 @@ export default function QuickNotes() {
 
               <label className={styles.fieldLabel}>Name</label>
               <input type="text" className={styles.inputField} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+
+              <label className={styles.fieldLabel}>Account Name</label>
+              <select className={styles.inputField} value={form.account_name} onChange={(e) => setForm({ ...form, account_name: e.target.value })}>
+                <option value="CASH IN HAND">CASH IN HAND</option>
+                <option value="DASTI">DASTI</option>
+                <option value="MEEZAN BANK">MEEZAN BANK</option>
+                <option value="AL HABIB BANK">AL HABIB BANK</option>
+                <option value="DEBIT">DEBIT</option>
+                <option value="CREDIT">CREDIT</option>
+              </select>
 
               <label className={styles.fieldLabel}>Item Name</label>
               <input type="text" className={styles.inputField} value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} />
@@ -285,12 +341,12 @@ export default function QuickNotes() {
               </div>
 
               <div className={styles.impactBox}>
-                <span className={styles.impactLabel}>IMPACT: </span>
+                <span className={styles.impactLabel}>ENTRY IMPACT: </span>
                 <span style={{ fontWeight: "bold", color: entryBalance >= 0 ? "#10b981" : "#ef4444" }}>
                   {formatValue(entryBalance, formCurrency)}
                 </span>
               </div>
-              <button type="submit" className={styles.saveBtn}>Save Transaction</button>
+              <button type="submit" className={styles.saveBtn}>{isEditing ? "Update Transaction" : "Save Transaction"}</button>
             </form>
           </div>
         </div>
