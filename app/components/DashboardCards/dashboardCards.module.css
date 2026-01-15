@@ -1,70 +1,123 @@
-.dashboardCard {
-  /* background: #fefefe; */
-  border-radius: 16px;
-  padding: 18px 20px;
-  border: 1px solid #f1f1f1;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-
-}
-
-.dashboardcardTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
+/* Container for the cards grid */
 .dashboardCardsGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  padding: 10px 0;
+}
+
+/* Link wrapper to make the whole card clickable */
+.cardLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  outline: none;
+}
+
+/* Main Card Style */
+.dashboardCard {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover Animation */
+.cardLink:hover .dashboardCard {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+  border-color: #f99042;
+}
+
+/* Card Top Section (Icon & Percentage) */
+.dashboardcardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .iconBox {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
-  background: #f5f6fa;
+  background: #fff8f3;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.cardLink:hover .iconBox {
+  transform: scale(1.1);
+  background: #f99042;
 }
 
 .iconImage {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
+  transition: filter 0.3s ease;
 }
 
+/* Icon color change on hover */
+.cardLink:hover .iconImage {
+  filter: brightness(0) invert(1);
+}
+
+/* Percentage/Trend Badge */
 .percent {
-  font-size: 13px;
-  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
+.percent img {
+  width: 14px;
+  height: 14px;
+}
+
+.up {
+  background-color: #ecfdf5;
+  color: #10b981;
+}
+
+.down {
+  background-color: #fef2f2;
+  color: #ef4444;
+}
+
+/* Title & Value Styling */
 .title {
-  margin-top: 14px;
   font-size: 14px;
-  color: #6b7280;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
 }
 
 .value {
-  margin-top: 4px;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
-  color: #111827;
+  color: #1e293b;
+  margin: 0;
+  letter-spacing: -0.5px;
 }
 
-/* Responsive like dashboard */
-@media (max-width: 1024px) {
-  .dashboardCardsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
+/* Optional: Mobile optimization */
+@media (max-width: 640px) {
   .dashboardCardsGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 }

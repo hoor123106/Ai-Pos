@@ -1,27 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link"; // Link import kiya
 import styles from "./dashboardCards.module.css";
 import Dexie from "dexie";
 
-const Card = ({ title, value, percent, icon, trend }) => {
+// Card component mein 'href' prop add kiya
+const Card = ({ title, value, percent, icon, trend, href }) => {
   return (
-    <div className={styles.dashboardCard}>
-      <div className={styles.dashboardcardTop}>
-        <div className={styles.iconBox}>
-          <img src={icon} alt={title} className={styles.iconImage} />
+    <Link href={href} className={styles.cardLink}>
+      <div className={styles.dashboardCard}>
+        <div className={styles.dashboardcardTop}>
+          <div className={styles.iconBox}>
+            <img src={icon} alt={title} className={styles.iconImage} />
+          </div>
+          <span className={`${styles.percent} ${trend === "up" ? styles.up : styles.down}`}>
+            <img
+              src={trend === "up" ? "/images/highVolume.png" : "/images/downVolume.png"}
+              alt="trend"
+            />
+            {percent}
+          </span>
         </div>
-        <span className={`${styles.percent} ${trend === "up" ? styles.up : styles.down}`}>
-          <img
-            src={trend === "up" ? "/images/highVolume.png" : "/images/downVolume.png"}
-            alt="trend"
-          />
-          {percent}
-        </span>
+        <p className={styles.title}>{title}</p>
+        <h2 className={styles.value}>{value}</h2>
       </div>
-      <p className={styles.title}>{title}</p>
-      <h2 className={styles.value}>{value}</h2>
-    </div>
+    </Link>
   );
 };
 
@@ -30,18 +34,14 @@ export default function DashboardCards() {
 
   const fetchLocalCounts = async () => {
     try {
-      // 1. Browser storage se user ki email check karein
       const userEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") || "Guest" : "Guest";
 
-      // 2. Wahi database connect karein jo Vendors/Customers page par hai
-      // Yaad rakhein: Ye name wahi hona chahiye jo baki files mein hai
       const customerDB = new Dexie(`CustomerDB_${userEmail}`);
       customerDB.version(1).stores({ customer_records: "++id" });
 
       const vendorDB = new Dexie(`VendorDB_${userEmail}`);
       vendorDB.version(1).stores({ vendor_records: "++id" });
 
-      // 3. Data count karein
       const customerCount = await customerDB.customer_records.count();
       const vendorCount = await vendorDB.vendor_records.count();
 
@@ -56,12 +56,8 @@ export default function DashboardCards() {
   };
 
   useEffect(() => {
-    // Component load hote hi count fetch karein
     fetchLocalCounts();
-
-    // Har 3 second baad count refresh karein (Auto-sync)
     const interval = setInterval(fetchLocalCounts, 3000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -73,6 +69,7 @@ export default function DashboardCards() {
         percent="Live"
         trend="up"
         icon="/images/community.png"
+        href="/dashboard/customers" // Link path
       />
 
       <Card
@@ -81,6 +78,7 @@ export default function DashboardCards() {
         percent="Live"
         trend="up"
         icon="/images/productsBlue.png"
+        href="/dashboard/vendors" // Link path
       />
 
       <Card
@@ -89,6 +87,7 @@ export default function DashboardCards() {
         percent="0%"
         trend="down"
         icon="/images/order.png"
+        href="/dashboard/stock" // Link path
       />
 
       <Card
@@ -97,6 +96,7 @@ export default function DashboardCards() {
         percent="0%"
         trend="up"
         icon="/images/money.png"
+        href="/dashboard/inventories" // Link path
       />
     </div>
   );
