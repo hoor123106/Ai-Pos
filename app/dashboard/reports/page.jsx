@@ -29,19 +29,18 @@ export default function Reports() {
     fetchReports();
   }, [billDb]);
 
-  // --- PDF DOWNLOAD LOGIC (FIXED) ---
+  // --- PDF DOWNLOAD LOGIC ---
   const downloadPDF = async () => {
     if (typeof window !== "undefined") {
       const element = document.getElementById("report-content");
-      // Dynamic import to avoid build errors
       const html2pdf = (await import("html2pdf.js")).default;
       
       const options = {
-        margin: 0.5,
+        margin: 0.3,
         filename: `${selectedInvoice.invoice_no}_Report.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
 
       html2pdf().set(options).from(element).save();
@@ -57,80 +56,116 @@ export default function Reports() {
     return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   };
 
-  if (!selectedInvoice) return <div style={{ padding: "40px", textAlign: "center" }}>Loading Reports...</div>;
+  if (!selectedInvoice) return <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Loading Reports...</div>;
 
   return (
-    <div style={{ padding: "40px", backgroundColor: "#f1f5f9", minHeight: "100vh", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ padding: "30px", backgroundColor: "#f1f5f9", minHeight: "100vh", fontFamily: "'Inter', sans-serif" }}>
       
-      {/* Search Bar */}
-      <div style={{ maxWidth: "800px", margin: "0 auto 20px", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#fff", padding: "15px", borderRadius: "10px" }}>
-        <div>
-          <label style={{ fontSize: "11px", fontWeight: "bold", color: "#64748b" }}>SELECT INVOICE</label>
+      {/* Top Bar for Selection & Action */}
+      <div style={{ maxWidth: "850px", margin: "0 auto 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", backgroundColor: "#fff", padding: "15px 20px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: "11px", fontWeight: "800", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Search Invoice Report</label>
           <select 
             onChange={(e) => handleInvoiceSelect(e.target.value)} 
             value={selectedInvoice.id}
-            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", width: "300px", display: "block", marginTop: "5px" }}
+            style={{ padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", width: "320px", display: "block", marginTop: "5px", outline: "none", backgroundColor: "#f8fafc" }}
           >
             {allInvoices.map(inv => (
               <option key={inv.id} value={inv.id}>
-                {inv.invoice_no} - {inv.customer_name}
+                {inv.invoice_no} — {inv.customer_name}
               </option>
             ))}
           </select>
         </div>
         <button 
           onClick={downloadPDF} 
-          style={{ backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "12px 25px", borderRadius: "8px", cursor: "pointer", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}
+          style={{ backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "12px 25px", borderRadius: "8px", cursor: "pointer", fontWeight: "700", display: "flex", alignItems: "center", gap: "10px" }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-          PDF Download
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download PDF
         </button>
       </div>
 
-      {/* Report Layout */}
-      <div id="report-content" style={{ maxWidth: "800px", margin: "0 auto", backgroundColor: "#fff", padding: "50px", borderRadius: "4px", boxShadow: "0 10px 25px rgba(0,0,0,0.05)", minHeight: "1000px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #f1f5f9", paddingBottom: "30px", marginBottom: "30px" }}>
+      {/* Professional Bill/Report Layout */}
+      <div id="report-content" style={{ 
+        maxWidth: "850px", 
+        margin: "0 auto", 
+        backgroundColor: "#ffffff", 
+        padding: "50px", 
+        borderRadius: "4px", 
+        boxShadow: "0 4px 20px rgba(0,0,0,0.08)", 
+        minHeight: "1050px",
+        color: "#1e293b"
+      }}>
+        
+        {/* Invoice Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "50px" }}>
           <div>
-            <h1 style={{ margin: 0, color: "#1e293b", fontSize: "28px", fontWeight: "800" }}>INVOICE REPORT</h1>
-            <p style={{ color: "#64748b", fontSize: "14px" }}>WIGA POS - Statement</p>
+            <div style={{ color: "#2563eb", fontWeight: "900", fontSize: "24px", marginBottom: "5px" }}>WIGA POS</div>
+            <h1 style={{ margin: 0, fontSize: "36px", fontWeight: "800", letterSpacing: "-1px", color: "#0f172a" }}>INVOICE</h1>
+            <p style={{ color: "#64748b", fontSize: "14px", margin: "5px 0" }}>Transaction Summary Report</p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <h3 style={{ margin: 0, color: "#2563eb" }}>{selectedInvoice.invoice_no}</h3>
-            <p style={{ margin: "5px 0", fontSize: "14px", fontWeight: "bold" }}>Date: {selectedInvoice.date}</p>
+            <div style={{ fontSize: "14px", fontWeight: "700", color: "#64748b" }}>INVOICE NO</div>
+            <div style={{ fontSize: "20px", fontWeight: "800", color: "#2563eb" }}>{selectedInvoice.invoice_no}</div>
+            <div style={{ marginTop: "15px", fontSize: "14px", fontWeight: "700", color: "#64748b" }}>DATE</div>
+            <div style={{ fontSize: "16px", fontWeight: "700" }}>{selectedInvoice.date}</div>
           </div>
         </div>
 
-        <div style={{ marginBottom: "40px" }}>
-          <p style={{ color: "#64748b", fontSize: "12px", fontWeight: "bold" }}>BILLED TO:</p>
-          <h2 style={{ margin: 0, fontSize: "20px" }}>{selectedInvoice.customer_name}</h2>
+        {/* Client Section */}
+        <div style={{ marginBottom: "40px", padding: "20px", backgroundColor: "#f8fafc", borderRadius: "10px", borderLeft: "5px solid #2563eb" }}>
+          <div style={{ fontSize: "12px", fontWeight: "800", color: "#64748b", marginBottom: "5px", textTransform: "uppercase" }}>Billed To:</div>
+          <div style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a" }}>{selectedInvoice.customer_name}</div>
+          <div style={{ fontSize: "14px", color: "#64748b", marginTop: "4px" }}>Status: <span style={{ color: "#059669", fontWeight: "700" }}>PAID</span></div>
         </div>
 
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "40px" }}>
+        {/* Table Header */}
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ backgroundColor: "#f8fafc", borderBottom: "2px solid #e2e8f0" }}>
-              <th style={{ padding: "15px", textAlign: "left" }}>ITEM</th>
-              <th style={{ padding: "15px", textAlign: "center" }}>QTY</th>
-              <th style={{ padding: "15px", textAlign: "right" }}>TOTAL</th>
+            <tr style={{ backgroundColor: "#1e293b" }}>
+              <th style={{ padding: "15px", textAlign: "left", color: "#fff", borderRadius: "8px 0 0 0", fontSize: "13px" }}>ITEM DESCRIPTION</th>
+              <th style={{ padding: "15px", textAlign: "center", color: "#fff", fontSize: "13px", width: "80px" }}>QTY</th>
+              <th style={{ padding: "15px", textAlign: "right", color: "#fff", fontSize: "13px", width: "120px" }}>UNIT PRICE</th>
+              <th style={{ padding: "15px", textAlign: "right", color: "#fff", borderRadius: "0 8px 0 0", fontSize: "13px", width: "120px" }}>TOTAL</th>
             </tr>
           </thead>
           <tbody>
             {selectedInvoice.items.map((item, index) => (
-              <tr key={index} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "15px" }}><strong>{item.itemCode}</strong><br/>{item.description}</td>
-                <td style={{ padding: "15px", textAlign: "center" }}>{item.qty}</td>
-                <td style={{ padding: "15px", textAlign: "right" }}>${Number(item.amount).toLocaleString()}</td>
+              <tr key={index} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                <td style={{ padding: "20px 15px" }}>
+                  <div style={{ fontWeight: "700", fontSize: "15px", color: "#0f172a" }}>{item.itemCode}</div>
+                  <div style={{ fontSize: "13px", color: "#64748b", marginTop: "3px" }}>{item.description || "No description provided"}</div>
+                </td>
+                <td style={{ padding: "20px 15px", textAlign: "center", fontWeight: "600" }}>{item.qty}</td>
+                <td style={{ padding: "20px 15px", textAlign: "right", color: "#64748b" }}>${Number(item.price).toLocaleString()}</td>
+                <td style={{ padding: "20px 15px", textAlign: "right", fontWeight: "700", color: "#0f172a" }}>${Number(item.amount).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <div style={{ width: "250px", borderTop: "2px solid #1e293b", paddingTop: "15px", textAlign: "right" }}>
-            <span style={{ fontWeight: "800", fontSize: "18px" }}>NET TOTAL: </span>
-            <span style={{ fontWeight: "800", fontSize: "18px", color: "#2563eb" }}>
-              ${calculateTotal(selectedInvoice.items).toLocaleString()}
-            </span>
+        {/* Totals Section */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "30px" }}>
+          <div style={{ width: "300px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 15px" }}>
+              <span style={{ color: "#64748b", fontWeight: "600" }}>Subtotal</span>
+              <span style={{ fontWeight: "700" }}>${calculateTotal(selectedInvoice.items).toLocaleString()}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "15px", backgroundColor: "#f1f5f9", borderRadius: "8px", marginTop: "10px" }}>
+              <span style={{ fontWeight: "800", fontSize: "18px" }}>Grand Total</span>
+              <span style={{ fontWeight: "800", fontSize: "18px", color: "#2563eb" }}>
+                ${calculateTotal(selectedInvoice.items).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+            </div>
           </div>
+        </div>
+
+        {/* Footer Note */}
+        <div style={{ marginTop: "100px", textAlign: "center", borderTop: "2px solid #f1f5f9", paddingTop: "30px" }}>
+          <p style={{ fontWeight: "700", margin: "0", color: "#0f172a" }}>Thank you for your business!</p>
+          <p style={{ fontSize: "12px", color: "#94a3b8", marginTop: "5px" }}>If you have any questions about this invoice, please contact support.</p>
+          <div style={{ fontSize: "10px", color: "#cbd5e1", marginTop: "40px", textTransform: "uppercase", letterSpacing: "2px" }}>Generated via WIGA POS Cloud Accounting</div>
         </div>
       </div>
     </div>
