@@ -17,6 +17,7 @@ export default function Sidebar() {
     { name: "Stock", href: "/dashboard/stock", icon: "/images/point-of-sale-icon.png", activeIcon: "/images/point-of-saleWhite.png" },
     { name: "Settings", href: "/dashboard/setting-pos", icon: "/images/setting-icon.png", activeIcon: "/images/settingswhite.png" },
     { name: "Bills & Invoices", href: "/dashboard/bills", icon: "/images/setting-icon.png", activeIcon: "/images/settingswhite.png" },
+        { name: "Reports", href: "/dashboard/reports", icon: "/images/setting-icon.png", activeIcon: "/images/settingswhite.png" },
   ];
 
   return (

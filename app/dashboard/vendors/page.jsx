@@ -11,8 +11,9 @@ export default function Vendors() {
       userEmail = localStorage.getItem("userEmail") || "Guest";
     }
     const dexieDb = new Dexie(`VendorDB_${userEmail}`);
-    dexieDb.version(1).stores({
-      vendor_records: "++id, date, vendor_name, account_name, currency, description, memo"
+    // "item_code" ko index mein add kiya taake search fast ho
+    dexieDb.version(2).stores({
+      vendor_records: "++id, item_code, date, vendor_name, account_name, currency, description, memo"
     });
     return dexieDb;
   }, []);
@@ -28,6 +29,7 @@ export default function Vendors() {
   const [formCurrency, setFormCurrency] = useState("USD");
 
   const initialFormState = {
+    item_code: "", // Naya field
     date: new Date().toISOString().split("T")[0],
     vendor_name: "",
     account_name: "CASH IN HAND",
@@ -179,6 +181,7 @@ export default function Vendors() {
         </button>
       </div>
 
+      {/* Statistics Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px", marginBottom: "30px" }}>
         <div style={{ backgroundColor: "#fff", padding: "20px", borderRadius: "12px", border: "1px solid #e5e7eb" }}>
           <span style={{ color: "#6b7280", fontSize: "12px", fontWeight: "bold" }}>TOTAL DEBIT</span>
@@ -195,9 +198,10 @@ export default function Vendors() {
       </div>
 
       <div style={{ backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #e5e7eb", overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1100px" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "1200px" }}>
           <thead style={{ backgroundColor: "#fafafa" }}>
             <tr style={{ fontSize: "12px", color: "#6b7280" }}>
+              <th style={{ padding: "15px" }}>ITEM CODE</th>
               <th style={{ padding: "15px" }}>VENDOR NAME</th>
               <th style={{ padding: "15px" }}>ACCOUNT NAME</th>
               <th style={{ padding: "15px" }}>DATE</th>
@@ -212,6 +216,7 @@ export default function Vendors() {
           <tbody style={{ fontSize: "14px" }}>
             {summaryRows.map((row) => (
               <tr key={row.id} style={{ borderBottom: "1px solid #f3f4f6", textAlign: "center" }}>
+                <td style={{ padding: "15px", fontWeight: "bold", color: "#6b7280" }}>{row.item_code || "—"}</td>
                 <td onClick={() => handleVendorClick(row.vendor_name)} style={{ padding: "15px", fontWeight: "bold", color: "#2563eb", cursor: "pointer", textDecoration: "underline" }}>{row.vendor_name}</td>
                 <td style={{ padding: "15px" }}>{row.account_name}</td>
                 <td style={{ padding: "15px" }}>{row.date}</td>
@@ -221,7 +226,6 @@ export default function Vendors() {
                 <td style={{ padding: "15px", color: "#e03131", fontWeight: "bold" }}>{formatValue(row.credit, row.currency).text}</td>
                 <td style={{ padding: "15px", fontWeight: "bold" }}>{formatValue(row.vendorTotalBalance, row.currency).text}</td>
                 <td style={{ padding: "15px", display: "flex", gap: "10px", justifyContent: "center" }}>
-                  {/* MAIN TABLE: Sirf edit icon show hoga yahan */}
                   <button onClick={() => handleEdit(row)} style={{ color: "#2563eb", border: "none", background: "none", cursor: "pointer" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </button>
@@ -253,8 +257,14 @@ export default function Vendors() {
                   <div style={{ flex: 1 }}><label style={{ fontSize: "10px" }}>AED Rate</label><input type="number" value={exchangeRates.AED || ""} onChange={(e) => handleManualRateChange("AED", e.target.value)} style={{ width: "100%", padding: "5px" }} /></div>
                 </div>
               </div>
+
+              {/* ITEM CODE INPUT */}
+              <label style={labelStyle}>Item Code / Barcode</label>
+              <input name="item_code" value={form.item_code} onChange={handleChange} style={{ ...inputStyle, border: "2px solid #3b82f6" }} placeholder="e.g. ART-101" required />
+
               <label style={labelStyle}>Vendor Name</label>
               <input name="vendor_name" value={form.vendor_name} onChange={handleChange} style={inputStyle} required />
+              
               <label style={labelStyle}>Account Name</label>
               <select name="account_name" value={form.account_name} onChange={handleChange} style={inputStyle}>
                 <option value="CASH IN HAND">CASH IN HAND</option>
@@ -263,20 +273,27 @@ export default function Vendors() {
                 <option value="DEBIT">DEBIT</option>
                 <option value="CREDIT">CREDIT</option>
               </select>
+
               <label style={labelStyle}>Date</label>
               <input name="date" type="date" value={form.date} onChange={handleChange} style={inputStyle} />
+              
               <label style={labelStyle}>Item Name</label>
               <textarea name="description" value={form.description} onChange={handleChange} style={{ ...inputStyle, height: "60px" }} />
+              
               <label style={labelStyle}>Memo</label>
               <textarea name="memo" value={form.memo} onChange={handleChange} style={{ ...inputStyle, height: "60px", resize: "none" }} placeholder="Enter additional details..." />
+              
               <label style={labelStyle}>Qty</label>
               <input name="qty" type="number" value={form.qty || ""} onChange={handleChange} style={inputStyle} />
+              
               <div style={{ display: "flex", gap: "10px" }}>
                 <div style={{ flex: 1 }}><label style={labelStyle}>Debit</label><input name="debit" type="number" value={form.debit || ""} onChange={handleChange} style={inputStyle} /></div>
                 <div style={{ flex: 1 }}><label style={labelStyle}>Credit</label><input name="credit" type="number" value={form.credit || ""} onChange={handleChange} style={inputStyle} /></div>
               </div>
+
               <label style={{ ...labelStyle, color: "#2563eb" }}>Entry Balance</label>
               <input value={formatValue(form.balance, formCurrency).text} style={{ ...inputStyle, backgroundColor: "#f0f7ff", fontWeight: "bold" }} disabled />
+              
               <button type="submit" style={{ width: "100%", backgroundColor: editingId ? "#2563eb" : "#000", color: "#fff", padding: "15px", borderRadius: "8px", marginTop: "25px", border: "none", cursor: "pointer", fontWeight: "bold" }}>
                 {editingId ? "Update Vendor" : "Save Vendor"}
               </button>
@@ -285,6 +302,7 @@ export default function Vendors() {
         </>
       )}
 
+      {/* Ledger Modal logic remains same (sirf item_code add kar sakte hain table mein) */}
       {selectedGroupData && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
           <div style={{ backgroundColor: "#fff", width: "1000px", maxHeight: "92vh", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -314,6 +332,7 @@ export default function Vendors() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ textAlign: "left", borderBottom: "2px solid #f3f4f6" }}>
+                      <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Code</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Date</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Account</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Memo</th>
@@ -333,6 +352,7 @@ export default function Vendors() {
                         const bal = formatValue(ledgerRunningBalance, item.currency);
                         return (
                           <tr key={item.id} style={{ borderBottom: "1px solid #f9fafb" }}>
+                            <td style={{ padding: "14px 10px", fontWeight: "bold" }}>{item.item_code || "—"}</td>
                             <td style={{ padding: "14px 10px" }}>{item.date}</td>
                             <td style={{ padding: "14px 10px" }}>{item.account_name}</td>
                             <td style={{ padding: "14px 10px", color: "#6b7280" }}>{item.memo || "—"}</td>
@@ -340,7 +360,6 @@ export default function Vendors() {
                             <td style={{ padding: "14px 10px", fontWeight: "500", color: cre.color }}>{cre.text}</td>
                             <td style={{ padding: "14px 10px", fontWeight: "600", color: bal.color }}>{bal.text}</td>
                             <td style={{ padding: "14px 10px", display: "flex", gap: "15px", justifyContent: "center" }}>
-                              {/* LEDGER MODAL: Yahan edit aur delete dono buttons hain */}
                               <button onClick={() => handleEdit(item)} style={{ color: "#3b82f6", border: "none", background: "none", cursor: "pointer" }}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                               </button>
