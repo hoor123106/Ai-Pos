@@ -11,8 +11,8 @@ export default function Customers() {
       userEmail = localStorage.getItem("userEmail") || "Guest";
     }
     const dexieDb = new Dexie(`CustomerDB_${userEmail}`);
-    dexieDb.version(1).stores({
-      // Schema mein sirf item_code add kiya
+    // Schema version update for consistency
+    dexieDb.version(2).stores({
       customer_records: "++id, item_code, date, customer_name, account_name, currency, description, memo"
     });
     return dexieDb;
@@ -29,7 +29,7 @@ export default function Customers() {
   const [formCurrency, setFormCurrency] = useState("USD");
 
   const initialFormState = {
-    item_code: "", // Naya field
+    item_code: "",
     date: new Date().toISOString().split("T")[0],
     customer_name: "",
     account_name: "CASH IN HAND",
@@ -48,6 +48,7 @@ export default function Customers() {
     setLoading(true);
     try {
       const data = await db.customer_records.toArray();
+      // Sort by date descending for the main list
       setRows(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
     } catch (error) {
       console.error("Fetch error:", error);
@@ -58,6 +59,7 @@ export default function Customers() {
 
   useEffect(() => { fetchCustomers(); }, [db]);
 
+  // Grouping Logic: Same name entries ko merge karna
   const getGroupedSummary = () => {
     const summaryMap = {};
     rows.forEach(row => {
@@ -161,7 +163,7 @@ export default function Customers() {
   };
 
   const deleteCustomer = async (id) => {
-    if (!confirm("Are you sure?")) return;
+    if (!confirm("Are you sure you want to delete this record?")) return;
     await db.customer_records.delete(id);
     fetchCustomers();
     if (selectedGroupData) setSelectedGroupData(null);
@@ -259,12 +261,12 @@ export default function Customers() {
                 </div>
               </div>
               
-              {/* Item Code field added exactly here */}
               <label style={labelStyle}>Item Code</label>
               <input name="item_code" value={form.item_code} onChange={handleChange} style={inputStyle} />
 
               <label style={labelStyle}>Customer Name</label>
               <input name="customer_name" value={form.customer_name} onChange={handleChange} style={inputStyle} required />
+              
               <label style={labelStyle}>Account Name</label>
               <select name="account_name" value={form.account_name} onChange={handleChange} style={inputStyle}>
                 <option value="CASH IN HAND">CASH IN HAND</option>
@@ -273,20 +275,27 @@ export default function Customers() {
                 <option value="DEBIT">DEBIT</option>
                 <option value="CREDIT">CREDIT</option>
               </select>
+
               <label style={labelStyle}>Date</label>
               <input name="date" type="date" value={form.date} onChange={handleChange} style={inputStyle} />
+              
               <label style={labelStyle}>Item Name</label>
               <textarea name="description" value={form.description} onChange={handleChange} style={{ ...inputStyle, height: "60px" }} />
+              
               <label style={labelStyle}>Memo</label>
               <textarea name="memo" value={form.memo} onChange={handleChange} style={{ ...inputStyle, height: "60px", resize: "none" }} placeholder="Enter additional details..." />
+              
               <label style={labelStyle}>Qty</label>
               <input name="qty" type="number" value={form.qty || ""} onChange={handleChange} style={inputStyle} />
+              
               <div style={{ display: "flex", gap: "10px" }}>
                 <div style={{ flex: 1 }}><label style={labelStyle}>Debit</label><input name="debit" type="number" value={form.debit || ""} onChange={handleChange} style={inputStyle} /></div>
                 <div style={{ flex: 1 }}><label style={labelStyle}>Credit</label><input name="credit" type="number" value={form.credit || ""} onChange={handleChange} style={inputStyle} /></div>
               </div>
+
               <label style={{ ...labelStyle, color: "#2563eb" }}>Entry Balance</label>
               <input value={formatValue(form.balance, formCurrency).text} style={{ ...inputStyle, backgroundColor: "#f0f7ff", fontWeight: "bold" }} disabled />
+              
               <button type="submit" style={{ width: "100%", backgroundColor: editingId ? "#2563eb" : "#000", color: "#fff", padding: "15px", borderRadius: "8px", marginTop: "25px", border: "none", cursor: "pointer", fontWeight: "bold" }}>
                 {editingId ? "Update Customer" : "Save Customer"}
               </button>
@@ -298,48 +307,78 @@ export default function Customers() {
       {selectedGroupData && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 2000 }}>
           <div style={{ backgroundColor: "#fff", width: "1000px", maxHeight: "92vh", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            
             <div style={{ backgroundColor: "#1e3a8a", color: "#fff", padding: "24px 30px", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: "20px" }}>Individual Customer Ledger</h2>
                 <p style={{ margin: "4px 0 0", opacity: 0.9 }}>Customer: {selectedGroupData.name}</p>
               </div>
-              <button onClick={() => setSelectedGroupData(null)} style={{ background: "none", border: "none", color: "#fff", fontSize: "24px", cursor: "pointer" }}>&times;</button>
+              
+              {/* Date Filter (Calendar) added like in Vendors */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#000', padding: '8px 15px', borderRadius: '10px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', color: "#fff" }}>FILTER DATE:</label>
+                <input 
+                  type="date" 
+                  value={modalFilterDate}
+                  onChange={(e) => setModalFilterDate(e.target.value)}
+                  style={{ padding: '6px', borderRadius: '6px', border: 'none', outline: 'none', cursor: 'pointer', fontSize: "13px", background: "#fff", color: "#000" }}
+                />
+                {modalFilterDate && (
+                  <button onClick={() => setModalFilterDate("")} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontSize: '11px', fontWeight: "bold" }}>Clear</button>
+                )}
+              </div>
             </div>
+
             <div style={{ padding: "30px", overflowY: "auto", flex: 1 }}>
                 <div style={{ display: 'none' }}>{ledgerRunningBalance = 0}</div>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ textAlign: "left", borderBottom: "2px solid #f3f4f6" }}>
-                      <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Item Code</th>
+                      <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Code</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Date</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Account</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Memo</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Debit</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Credit</th>
                       <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563" }}>Balance</th>
+                      <th style={{ padding: "12px 10px", fontSize: "13px", color: "#4b5563", textAlign: "center" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedGroupData.history.map(item => {
+                    {selectedGroupData.history
+                      .filter(item => modalFilterDate ? item.date === modalFilterDate : true)
+                      .map(item => {
                         ledgerRunningBalance += (Number(item.debit) || 0) - (Number(item.credit) || 0);
+                        const deb = formatValue(item.debit, item.currency);
+                        const cre = formatValue(item.credit, item.currency);
+                        const bal = formatValue(ledgerRunningBalance, item.currency);
                         return (
                           <tr key={item.id} style={{ borderBottom: "1px solid #f9fafb" }}>
                             <td style={{ padding: "14px 10px", fontWeight: "bold" }}>{item.item_code || "—"}</td>
                             <td style={{ padding: "14px 10px" }}>{item.date}</td>
                             <td style={{ padding: "14px 10px" }}>{item.account_name}</td>
                             <td style={{ padding: "14px 10px", color: "#6b7280" }}>{item.memo || "—"}</td>
-                            <td style={{ padding: "14px 10px", color: "#0ca678" }}>{formatValue(item.debit, item.currency).text}</td>
-                            <td style={{ padding: "14px 10px", color: "#e03131" }}>{formatValue(item.credit, item.currency).text}</td>
-                            <td style={{ padding: "14px 10px", fontWeight: "bold" }}>{formatValue(ledgerRunningBalance, item.currency).text}</td>
+                            <td style={{ padding: "14px 10px", fontWeight: "500", color: deb.color }}>{deb.text}</td>
+                            <td style={{ padding: "14px 10px", fontWeight: "500", color: cre.color }}>{cre.text}</td>
+                            <td style={{ padding: "14px 10px", fontWeight: "600", color: bal.color }}>{bal.text}</td>
+                            <td style={{ padding: "14px 10px", display: "flex", gap: "15px", justifyContent: "center" }}>
+                              <button onClick={() => handleEdit(item)} style={{ color: "#3b82f6", border: "none", background: "none", cursor: "pointer" }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                              </button>
+                              <button onClick={() => deleteCustomer(item.id)} style={{ color: "#ef4444", border: "none", background: "none", cursor: "pointer" }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            </td>
                           </tr>
                         );
-                    })}
+                      })}
                   </tbody>
                 </table>
                 <div style={{ background: "#f8f9fa", padding: "18px 25px", marginTop: "25px", borderRadius: "12px", border: "1px solid #edf2f7", textAlign: 'right' }}>
                     <span style={{ fontSize: "14px", color: "#64748b", marginRight: "10px" }}>Net Total for {selectedGroupData.name}:</span>
                     <span style={{ fontSize: "18px", color: "#1e3a8a", fontWeight: "bold" }}>{formatValue(selectedGroupData.netBalance, selectedGroupData.currency).text}</span>
                 </div>
+                <button onClick={() => setSelectedGroupData(null)} style={{ width: "100%", padding: "14px", backgroundColor: "#1e3a8a", color: "#fff", border: "none", borderRadius: "12px", marginTop: "25px", cursor: "pointer", fontWeight: 'bold' }}>Close Ledger</button>
             </div>
           </div>
         </div>
